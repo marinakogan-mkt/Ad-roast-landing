@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roast My Ads</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .step {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .emoji {
+            font-size: 64px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.2;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        button {
+            width: 100%;
+            padding: 18px 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: #fff;
+            color: #0a0a0a;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .note {
+            margin-top: 24px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .note a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+        }
+
+        .note a:hover {
+            color: #fff;
+        }
+
+        .step-indicator {
+            margin-bottom: 32px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Step 1: Ad Library Link -->
+        <div class="step active" id="step1">
+            <div class="emoji">🔥</div>
+            <h1>Your ads need a reality check.</h1>
+            <p class="subtitle">Drop your LinkedIn Ad Library link.<br>I'll tell you why people keep scrolling.</p>
+            
+            <form id="form1">
+                <input 
+                    type="text" 
+                    id="ad_library_url" 
+                    placeholder="Paste your LinkedIn Ad Library link" 
+                    required
+                >
+                <button type="submit">Roast My Ads 🔥</button>
+            </form>
+            
+            <p class="note">
+                Don't have your link? <a href="https://www.linkedin.com/ad-library/" target="_blank">Find it here</a>
+            </p>
+        </div>
+
+        <!-- Step 2: LinkedIn Profile -->
+        <div class="step" id="step2">
+            <div class="step-indicator">Almost there</div>
+            <h1>Where should I send the roast?</h1>
+            <p class="subtitle">Drop your LinkedIn so I can DM you the feedback.</p>
+            
+            <form id="form2">
+                <input 
+                    type="text" 
+                    id="linkedin_profile" 
+                    placeholder="Your LinkedIn profile URL"
+                    required
+                >
+                <button type="submit">Send Me The Roast</button>
+            </form>
+            
+            <p class="note">
+                ⚡ Make sure we're connected or I can't reach you
+            </p>
+        </div>
+
+        <!-- Success Message -->
+        <div class="step" id="step3">
+            <div class="emoji">✅</div>
+            <h1>Roast incoming.</h1>
+            <p class="subtitle">Check your inbox. No sugarcoating.</p>
+        </div>
+    </div>
+
+    <script>
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+        const form1 = document.getElementById('form1');
+        const form2 = document.getElementById('form2');
+
+        let adLibraryUrl = '';
+
+        form1.addEventListener('submit', (e) => {
+            e.preventDefault();
+            adLibraryUrl = document.getElementById('ad_library_url').value;
+            step1.classList.remove('active');
+            step2.classList.add('active');
+        });
+
+        form2.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const linkedinProfile = document.getElementById('linkedin_profile').value;
+            
+            // Here you would send the data to your backend
+            console.log({
+                adLibraryUrl,
+                linkedinProfile
+            });
+
+            step2.classList.remove('active');
+            step3.classList.add('active');
+        });
+    </script>
+</body>
+</html>
