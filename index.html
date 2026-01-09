@@ -106,6 +106,11 @@
             transform: translateY(-2px);
         }
 
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .note {
             margin-top: 24px;
             font-size: 0.85rem;
@@ -165,7 +170,7 @@
                     placeholder="Your LinkedIn profile URL"
                     required
                 >
-                <button type="submit">Send Me The Roast</button>
+                <button type="submit" id="submitBtn">Send Me The Roast</button>
             </form>
             
             <p class="note">
@@ -173,11 +178,11 @@
             </p>
         </div>
 
-        <!-- Success Message -->
+        <!-- Step 3: Success -->
         <div class="step" id="step3">
             <div class="emoji">✅</div>
             <h1>Roast incoming.</h1>
-            <p class="subtitle">Check your inbox. No sugarcoating.</p>
+            <p class="subtitle">Check your LinkedIn DMs. No sugarcoating.</p>
         </div>
     </div>
 
@@ -187,6 +192,7 @@
         const step3 = document.getElementById('step3');
         const form1 = document.getElementById('form1');
         const form2 = document.getElementById('form2');
+        const submitBtn = document.getElementById('submitBtn');
 
         let adLibraryUrl = '';
 
@@ -199,16 +205,31 @@
 
         form2.addEventListener('submit', (e) => {
             e.preventDefault();
-            const linkedinProfile = document.getElementById('linkedin_profile').value;
             
-            // Here you would send the data to your backend
-            console.log({
-                adLibraryUrl,
-                linkedinProfile
-            });
+            const linkedinProfile = document.getElementById('linkedin_profile').value;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
 
-            step2.classList.remove('active');
-            step3.classList.add('active');
+            const formData = new FormData();
+            formData.append('ad_library_url', adLibraryUrl);
+            formData.append('linkedin_profile', linkedinProfile);
+            formData.append('_subject', '🔥 New Ad Roast Request');
+            formData.append('_captcha', 'false');
+            formData.append('_template', 'table');
+
+            fetch('https://formsubmit.co/ajax/marina.kogan@brandswithpurpose.us', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                step2.classList.remove('active');
+                step3.classList.add('active');
+            })
+            .catch(error => {
+                step2.classList.remove('active');
+                step3.classList.add('active');
+            });
         });
     </script>
 </body>
