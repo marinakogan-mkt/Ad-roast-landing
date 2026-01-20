@@ -1,237 +1,938 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roast My Ads</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+import React, { useState } from 'react';
+import { Flame, Upload, Link, FileText, ChevronRight, Copy, Check, Share2, AlertCircle, Sparkles, Target, Eye, MousePointer, Shield, Zap, ArrowRight, X, RotateCcw, Users, Linkedin, Loader2 } from 'lucide-react';
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            color: #fff;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+const EMAIL_CONFIG = {
+  service: 'emailjs',
+  emailjs_service_id: 'service_ywioabe',
+  emailjs_template_id: 'template_gtqow85', 
+  emailjs_public_key: '964Wa83HevoEa5KnS',
+  notify_email: 'marina.kogan@brandswithpurpose.us'
+};
 
-        .container {
-            max-width: 520px;
-            width: 100%;
-            text-align: center;
-        }
+// LinkedIn URL validator
+const validateLinkedInUrl = (url) => {
+  if (!url) return { valid: false, error: 'LinkedIn URL is required' };
+  
+  const trimmedUrl = url.trim().toLowerCase();
+  
+  // Check for linkedin.com/in/ pattern
+  const linkedInPattern = /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[\w-]{3,100}\/?$/i;
+  
+  if (!linkedInPattern.test(trimmedUrl)) {
+    if (trimmedUrl.includes('linkedin.com') && !trimmedUrl.includes('/in/')) {
+      return { valid: false, error: 'Please use your profile URL (linkedin.com/in/yourname)' };
+    }
+    return { valid: false, error: 'Enter a valid LinkedIn profile URL' };
+  }
+  
+  return { valid: true, error: null };
+};
 
-        .step {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
+// Email sender function
+const sendEmailNotification = async (data) => {
+  const { linkedinUrl, platform, offerType, icpDescription, inputs, roastResult } = data;
+  
+  const emailContent = `
+🔥 NEW AD ROAST COMPLETED
+========================
 
-        .step.active {
-            display: block;
-        }
+👤 LINKEDIN PROFILE
+${linkedinUrl}
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+📋 ROAST DETAILS
+Platform: ${platform}
+Offer Type: ${offerType}
+Target ICP: ${icpDescription}
 
-        .emoji {
-            font-size: 64px;
-            margin-bottom: 24px;
-        }
+📝 INPUTS PROVIDED
+Landing Page: ${inputs.landingUrl || 'Not provided'}
+Ad Copy: ${inputs.adCopy || 'Not provided'}
+Visual Description: ${inputs.visualDescription || 'Not provided'}
+Image Uploaded: ${inputs.adImage ? 'Yes' : 'No'}
 
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 16px;
-            line-height: 1.2;
-            color: rgba(255, 255, 255, 0.95);
-        }
+📊 ROAST RESULTS
+Overall Score: ${roastResult.overall_score}/10
+ICP Mismatch: ${roastResult.icp_mismatch}
 
-        .subtitle {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 40px;
-            line-height: 1.6;
-        }
+🚨 ISSUES IDENTIFIED
+${roastResult.issues.map((issue, i) => `${i + 1}. ${issue.title}: ${issue.score}/10 - ${issue.explanation}`).join('\n')}
 
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
+✏️ FIX KIT
+Headlines:
+${roastResult.fix_kit.headlines.map((h, i) => `  ${i + 1}. ${h}`).join('\n')}
 
-        input {
-            width: 100%;
-            padding: 16px 20px;
-            font-size: 1rem;
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            color: #fff;
-            transition: border-color 0.2s;
-        }
+Body: ${roastResult.fix_kit.body}
 
-        input:focus {
-            outline: none;
-            border-color: rgba(255, 255, 255, 0.4);
-        }
+CTAs: ${roastResult.fix_kit.ctas.join(', ')}
 
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.35);
-        }
+Rationale: ${roastResult.fix_kit.rationale}
 
-        button {
-            width: 100%;
-            padding: 18px 24px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 12px;
-            background: #fff;
-            color: #0a0a0a;
-            cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
-        }
+🧪 EXPERIMENTS
+${roastResult.experiments.map((exp, i) => `${i + 1}. ${exp.title}: ${exp.description}`).join('\n')}
 
-        button:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
+✅ NEXT STEPS
+${roastResult.next_steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+========================
+Sent from AdRoast App
+  `.trim();
 
-        .note {
-            margin-top: 24px;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.35);
+  try {
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: EMAIL_CONFIG.emailjs_service_id,
+        template_id: EMAIL_CONFIG.emailjs_template_id,
+        user_id: EMAIL_CONFIG.emailjs_public_key,
+        template_params: {
+          to_email: EMAIL_CONFIG.notify_email,
+          subject: `🔥 New Ad Roast: ${platform} | Score: ${roastResult.overall_score}/10 | ${linkedinUrl}`,
+          message: emailContent,
+          linkedin_url: linkedinUrl,
+          platform: platform,
+          score: roastResult.overall_score,
+          ad_copy: inputs.adCopy || 'Not provided',
+          landing_url: inputs.landingUrl || 'Not provided',
+          icp: icpDescription
         }
+      })
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Email error:', error);
+    return false;
+  }
+};
 
-        .note a {
-            color: rgba(255, 255, 255, 0.6);
-            text-decoration: none;
-        }
+// Score color helper
+const getScoreColor = (score) => {
+  if (score <= 3) return 'text-red-400 bg-red-500/20';
+  if (score <= 6) return 'text-pink-400 bg-pink-500/20';
+  return 'text-green-400 bg-green-500/20';
+};
 
-        .note a:hover {
-            color: #fff;
-        }
+// Issue icons mapping
+const issueIcons = {
+  headline_clarity: Target,
+  cta_friction: MousePointer,
+  visual_copy_match: Eye,
+  benefit_specificity: Sparkles,
+  trust_signals: Shield,
+};
 
-        .step-indicator {
-            margin-bottom: 32px;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.3);
-            letter-spacing: 0.5px;
+// Main App Component
+export default function AdRoastApp() {
+  const [currentView, setCurrentView] = useState('landing');
+  const [platform, setPlatform] = useState(null);
+  const [offerType, setOfferType] = useState(null);
+  const [icpDescription, setIcpDescription] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [linkedinError, setLinkedinError] = useState(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [inputs, setInputs] = useState({
+    landingUrl: '',
+    adImage: null,
+    adImagePreview: null,
+    adCopy: '',
+    visualDescription: '',
+  });
+  const [roastResult, setRoastResult] = useState(null);
+  const [copied, setCopied] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [shareLink, setShareLink] = useState(null);
+
+  const hasValidInput = inputs.landingUrl.trim() || inputs.adImage || (inputs.adCopy.length > 20);
+  const canProceedFromOnboarding = platform && offerType && icpDescription.length > 10;
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setInputs(prev => ({
+          ...prev,
+          adImage: file,
+          adImagePreview: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const copyToClipboard = async (text, key) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(prev => ({ ...prev, [key]: true }));
+    setTimeout(() => setCopied(prev => ({ ...prev, [key]: false })), 2000);
+  };
+
+  const generateRoast = async () => {
+    setIsLoading(true);
+    setError(null);
+    setCurrentView('processing');
+
+    const systemPrompt = `You are AdRoast, a brutally honest ad performance analyst. You help SaaS founders improve their paid ads.
+
+CRITICAL: The user will tell you WHO their ads are targeting (their ICP). Your job is to analyze whether the ad effectively speaks to THAT specific audience — not to SaaS founders, but to whoever the founder says their customers are.
+
+Your approach:
+- Direct, no fluff, slightly sarcastic but never mean
+- Use the "barbecue test": would this make sense at a casual BBQ to someone in the target ICP?
+- Always tie feedback to specific, fixable actions
+- Cite specific words/phrases from their copy when critiquing
+- Analyze whether messaging resonates with the STATED ICP, not a generic audience
+
+Scoring rubric (1–10):
+- 1–3: Actively hurting conversions
+- 4–6: Generic, forgettable, wasted spend
+- 7–8: Solid, minor optimizations needed
+- 9–10: Best-in-class, ship it
+
+Return ONLY valid JSON, no markdown.`;
+
+    const userPrompt = `Analyze this ad. The founder's target customer (ICP) is: "${icpDescription}"
+
+Your job is to evaluate whether this ad effectively speaks to that specific audience.
+
+Platform: ${platform}
+Offer Type: ${offerType}
+Target ICP: ${icpDescription}
+${inputs.landingUrl ? `Landing Page URL: ${inputs.landingUrl}` : ''}
+${inputs.adCopy ? `Ad Copy: ${inputs.adCopy}` : ''}
+${inputs.visualDescription ? `Visual Description: ${inputs.visualDescription}` : ''}
+${inputs.adImage ? `Image uploaded: Yes` : ''}
+
+Return JSON with this structure:
+{
+  "icp_mismatch": "Single sentence about whether this ad actually speaks to ${icpDescription} — or who it accidentally targets instead",
+  "overall_score": <1-10>,
+  "issues": [
+    {"category": "headline_clarity", "title": "Headline Clarity", "score": <1-10>, "explanation": "Does this headline grab attention of ${icpDescription}? Be specific."},
+    {"category": "cta_friction", "title": "CTA Friction", "score": <1-10>, "explanation": "Is this CTA appropriate for ${icpDescription}? Would they click?"},
+    {"category": "visual_copy_match", "title": "Visual-Copy Match", "score": <1-10>, "explanation": "Does the visual resonate with ${icpDescription}?"},
+    {"category": "benefit_specificity", "title": "Benefit Specificity", "score": <1-10>, "explanation": "Are benefits stated in terms ${icpDescription} cares about?"},
+    {"category": "trust_signals", "title": "Trust Signals", "score": <1-10>, "explanation": "Would ${icpDescription} find these credible?"}
+  ],
+  "fix_kit": {
+    "headlines": ["Headline rewritten for ${icpDescription}", "Variant 2", "Variant 3"],
+    "body": "Body copy rewritten to speak directly to ${icpDescription}",
+    "ctas": ["CTA 1 for ${icpDescription}", "CTA 2"],
+    "rationale": "Why these changes will resonate better with ${icpDescription}"
+  },
+  "experiments": [
+    {"title": "Experiment 1", "description": "What to test with ${icpDescription}"},
+    {"title": "Experiment 2", "description": "What to test"},
+    {"title": "Experiment 3", "description": "What to test"}
+  ],
+  "next_steps": ["Action 1", "Action 2", "Action 3", "Action 4"]
+}
+
+Be harsh but fair. Most ads deserve a 4-6. Quote their actual copy when critiquing. Focus everything on whether this ad works for: ${icpDescription}`;
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2000,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.content?.[0]?.text) {
+        const jsonMatch = data.content[0].text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]);
+          setRoastResult(result);
+          setShareLink(`https://adroast.ai/r/${Math.random().toString(36).substr(2, 9)}`);
+          setCurrentView('linkedin'); // Go to LinkedIn capture before showing results
+        } else {
+          throw new Error('Could not parse response');
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Step 1: Ad Library Link -->
-        <div class="step active" id="step1">
-            <div class="emoji">🔥</div>
-            <h1>Your ads need a reality check.</h1>
-            <p class="subtitle">Drop your LinkedIn Ad Library link.<br>I'll tell you why people keep scrolling.</p>
+      } else {
+        throw new Error('Invalid response');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Failed to generate roast. Please try again.');
+      setCurrentView('input');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetApp = () => {
+    setCurrentView('landing');
+    setPlatform(null);
+    setOfferType(null);
+    setIcpDescription('');
+    setLinkedinUrl('');
+    setLinkedinError(null);
+    setInputs({ landingUrl: '', adImage: null, adImagePreview: null, adCopy: '', visualDescription: '' });
+    setRoastResult(null);
+    setShareLink(null);
+    setError(null);
+  };
+
+  // Handle LinkedIn submission and email notification
+  const handleLinkedInSubmit = async () => {
+    // Validate LinkedIn URL
+    const validation = validateLinkedInUrl(linkedinUrl);
+    if (!validation.valid) {
+      setLinkedinError(validation.error);
+      return;
+    }
+    
+    setLinkedinError(null);
+    setIsSendingEmail(true);
+    
+    // Send email notification
+    try {
+      await sendEmailNotification({
+        linkedinUrl,
+        platform,
+        offerType,
+        icpDescription,
+        inputs,
+        roastResult
+      });
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      // Continue to results even if email fails
+    }
+    
+    setIsSendingEmail(false);
+    setCurrentView('results');
+  };
+
+  // Landing Page
+  if (currentView === 'landing') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white overflow-auto">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-20 right-10 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 max-w-5xl mx-auto px-6 py-10">
+          <header className="flex items-center justify-between mb-16">
+            <div className="flex items-center gap-2">
+              <Flame className="w-8 h-8 text-pink-500" />
+              <span className="text-xl font-bold tracking-tight">AdRoast</span>
+            </div>
+          </header>
+
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/30 rounded-full mb-6">
+              <Flame className="w-4 h-4 text-pink-400" />
+              <span className="text-pink-400 text-sm font-medium">For SaaS Founders Running Ads</span>
+            </div>
             
-            <form id="form1">
-                <input 
-                    type="text" 
-                    id="ad_library_url" 
-                    placeholder="Paste your LinkedIn Ad Library link" 
-                    required
-                >
-                <button type="submit">Roast My Ads 🔥</button>
-            </form>
+            <h1 className="text-4xl md:text-6xl font-bold mb-5 leading-tight tracking-tight">
+              Your ads aren't converting.
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-red-500 to-pink-400">
+                Let's find out why.
+              </span>
+            </h1>
             
-            <p class="note">
-                Don't have your link? <a href="https://www.linkedin.com/ad-library/" target="_blank">Find it here</a>
+            <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-10">
+              Get a brutally honest AI roast of your ads — analyzed against YOUR specific ICP. 
+              Walk away with copy that actually speaks to your customers.
             </p>
-        </div>
-
-        <!-- Step 2: LinkedIn Profile -->
-        <div class="step" id="step2">
-            <div class="step-indicator">Almost there</div>
-            <h1>Where should I send the roast?</h1>
-            <p class="subtitle">Drop your LinkedIn so I can DM you the feedback.</p>
             
-            <form id="form2">
-                <input 
-                    type="text" 
-                    id="linkedin_profile" 
-                    placeholder="Your LinkedIn profile URL"
-                    required
+            <button 
+              onClick={() => setCurrentView('onboarding')}
+              className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-500 to-red-500 rounded-xl font-semibold text-lg hover:scale-105 transition-transform shadow-lg shadow-pink-500/25"
+            >
+              <Flame className="w-5 h-5" />
+              Roast My Ad
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            
+            <p className="text-zinc-500 mt-4 text-sm">Free • No signup required</p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-4">
+            {[
+              { icon: Users, title: "ICP-Specific Analysis", desc: "Roast based on YOUR target customer" },
+              { icon: AlertCircle, title: "5 Critical Issues", desc: "Scored 1-10 with quotes from your copy" },
+              { icon: Zap, title: "Fix Kit", desc: "Ready-to-paste headlines and CTAs" },
+              { icon: Sparkles, title: "3 Experiments", desc: "Testable hypotheses for this week" },
+            ].map((feature, i) => (
+              <div key={i} className="p-4 bg-zinc-900/50 border border-zinc-800/50 rounded-xl hover:border-pink-500/30 transition-colors">
+                <feature.icon className="w-7 h-7 text-pink-400 mb-3" />
+                <h3 className="font-semibold mb-1 text-sm">{feature.title}</h3>
+                <p className="text-zinc-500 text-xs">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding - Now includes ICP input
+  if (currentView === 'onboarding') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6 overflow-auto">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-10">
+            <div className="flex items-center justify-center gap-2 mb-5">
+              <Flame className="w-7 h-7 text-pink-500" />
+              <span className="text-lg font-bold">AdRoast</span>
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Tell Us About Your Ad</h1>
+            <p className="text-zinc-400 text-sm">So we can roast it properly</p>
+          </div>
+
+          <div className="space-y-5">
+            {/* ICP Input - THE KEY FIELD */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2">
+                <Users className="w-4 h-4 text-pink-400" />
+                Who is your ad targeting? (Your ICP)
+              </label>
+              <textarea
+                placeholder="e.g., Engineering managers at Series B+ startups who are frustrated with slow CI/CD pipelines and need to ship faster..."
+                value={icpDescription}
+                onChange={(e) => setIcpDescription(e.target.value)}
+                className="w-full h-24 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-pink-500 resize-none placeholder:text-zinc-600"
+              />
+              <p className="text-xs text-zinc-500 mt-1.5">
+                Be specific: job title, company size, pain points, buying triggers
+              </p>
+              {icpDescription.length > 0 && icpDescription.length < 10 && (
+                <p className="text-xs text-pink-400 mt-1">Need more detail to give a useful roast</p>
+              )}
+            </div>
+
+            {/* Platform */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Platform</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Meta', 'Google', 'LinkedIn'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPlatform(p.toLowerCase())}
+                    className={`p-3 rounded-xl border-2 transition-all font-medium text-sm ${
+                      platform === p.toLowerCase()
+                        ? 'border-pink-500 bg-pink-500/10 text-pink-400'
+                        : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Offer Type */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Offer Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'demo', label: 'Book a Demo' },
+                  { id: 'trial', label: 'Free Trial' },
+                ].map((offer) => (
+                  <button
+                    key={offer.id}
+                    onClick={() => setOfferType(offer.id)}
+                    className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                      offerType === offer.id
+                        ? 'border-pink-500 bg-pink-500/10 text-pink-400'
+                        : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'
+                    }`}
+                  >
+                    {offer.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCurrentView('input')}
+              disabled={!canProceedFromOnboarding}
+              className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+                canProceedFromOnboarding
+                  ? 'bg-gradient-to-r from-pink-500 to-red-500 hover:scale-[1.02]'
+                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+              }`}
+            >
+              Continue <ChevronRight className="w-5 h-5" />
+            </button>
+            
+            {!canProceedFromOnboarding && (
+              <p className="text-center text-zinc-500 text-xs">
+                {!icpDescription || icpDescription.length < 10 
+                  ? "Describe your target customer to continue" 
+                  : "Select platform and offer type"}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Input Gate
+  if (currentView === 'input') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white p-5 overflow-auto">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Flame className="w-7 h-7 text-pink-500" />
+              <span className="text-lg font-bold">AdRoast</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-zinc-800 rounded text-xs capitalize">{platform}</span>
+              <span className="px-2 py-1 bg-zinc-800 rounded text-xs capitalize">{offerType}</span>
+            </div>
+          </div>
+
+          {/* ICP Reminder Banner */}
+          <div className="mb-6 p-3 bg-pink-500/10 border border-pink-500/30 rounded-xl">
+            <div className="flex items-start gap-2">
+              <Users className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-pink-400 font-medium">Targeting: {icpDescription.slice(0, 80)}{icpDescription.length > 80 ? '...' : ''}</p>
+                <button 
+                  onClick={() => setCurrentView('onboarding')}
+                  className="text-xs text-zinc-400 hover:text-white mt-1"
                 >
-                <button type="submit" id="submitBtn">Send Me The Roast</button>
-            </form>
+                  Edit ICP →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mb-2">Feed the Fire</h1>
+            <p className="text-zinc-400 text-sm">Provide at least one input</p>
+          </div>
+
+          {error && (
+            <div className="mb-5 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 flex items-center gap-2 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4 mb-6">
+            {/* Landing URL */}
+            <div className={`p-4 rounded-xl border transition-all ${
+              inputs.landingUrl ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Link className={`w-5 h-5 ${inputs.landingUrl ? 'text-green-400' : 'text-zinc-400'}`} />
+                <span className="font-medium text-sm">Landing Page URL</span>
+                {inputs.landingUrl && <Check className="w-4 h-4 text-green-400 ml-auto" />}
+              </div>
+              <input
+                type="url"
+                placeholder="https://your-landing-page.com"
+                value={inputs.landingUrl}
+                onChange={(e) => setInputs(prev => ({ ...prev, landingUrl: e.target.value }))}
+                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500"
+              />
+            </div>
+
+            {/* Image Upload */}
+            <div className={`p-4 rounded-xl border transition-all ${
+              inputs.adImage ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Upload className={`w-5 h-5 ${inputs.adImage ? 'text-green-400' : 'text-zinc-400'}`} />
+                <span className="font-medium text-sm">Ad Creative</span>
+                {inputs.adImage && <Check className="w-4 h-4 text-green-400 ml-auto" />}
+              </div>
+              
+              {inputs.adImagePreview ? (
+                <div className="relative">
+                  <img src={inputs.adImagePreview} alt="Ad" className="w-full h-28 object-cover rounded-lg" />
+                  <button
+                    onClick={() => setInputs(prev => ({ ...prev, adImage: null, adImagePreview: null }))}
+                    className="absolute top-1 right-1 w-6 h-6 bg-zinc-900/80 rounded-full flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="block w-full py-6 border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer hover:border-zinc-600 text-center">
+                  <Upload className="w-5 h-5 mx-auto mb-1 text-zinc-500" />
+                  <span className="text-zinc-500 text-xs">Click to upload</span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
+              )}
+              
+              {inputs.adImage && (
+                <input
+                  type="text"
+                  placeholder="Describe the image briefly..."
+                  value={inputs.visualDescription}
+                  onChange={(e) => setInputs(prev => ({ ...prev, visualDescription: e.target.value }))}
+                  className="w-full mt-3 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500"
+                />
+              )}
+            </div>
+
+            {/* Ad Copy */}
+            <div className={`p-4 rounded-xl border transition-all ${
+              inputs.adCopy.length > 20 ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className={`w-5 h-5 ${inputs.adCopy.length > 20 ? 'text-green-400' : 'text-zinc-400'}`} />
+                <span className="font-medium text-sm">Ad Copy</span>
+                {inputs.adCopy.length > 20 && <Check className="w-4 h-4 text-green-400 ml-auto" />}
+              </div>
+              <textarea
+                placeholder="Paste your ad headline and body copy..."
+                value={inputs.adCopy}
+                onChange={(e) => setInputs(prev => ({ ...prev, adCopy: e.target.value }))}
+                className="w-full h-24 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500 resize-none"
+              />
+              {inputs.adCopy.length > 0 && (
+                <span className="text-xs text-zinc-500 mt-1 block">{inputs.adCopy.length} characters</span>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={generateRoast}
+            disabled={!hasValidInput}
+            className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+              hasValidInput
+                ? 'bg-gradient-to-r from-pink-500 to-red-500 hover:scale-[1.01] shadow-lg shadow-pink-500/25'
+                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+            }`}
+          >
+            <Flame className="w-5 h-5" />
+            Generate Roast
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Processing
+  if (currentView === 'processing') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
+            <div className="absolute inset-0 rounded-full border-4 border-pink-500 border-t-transparent animate-spin" />
+            <Flame className="absolute inset-0 m-auto w-10 h-10 text-pink-500" />
+          </div>
+          
+          <h2 className="text-xl font-bold mb-3">Roasting your ad...</h2>
+          
+          <div className="space-y-2 text-zinc-400 text-sm">
+            <p className="animate-pulse">Checking ICP alignment...</p>
+            <p className="animate-pulse">Finding messaging gaps...</p>
+            <p className="animate-pulse">Generating rewrites for your audience...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // LinkedIn Capture (NEW STEP - before results)
+  if (currentView === 'linkedin') {
+    const validation = linkedinUrl ? validateLinkedInUrl(linkedinUrl) : { valid: false };
+    
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+              <Flame className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Your Roast is Ready! 🔥</h1>
+            <p className="text-zinc-400 text-sm">One last step before we reveal the results</p>
+          </div>
+
+          <div className="p-6 bg-zinc-900/50 border border-zinc-800 rounded-2xl mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#0A66C2]/20 flex items-center justify-center">
+                <Linkedin className="w-5 h-5 text-[#0A66C2]" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Drop your LinkedIn</h3>
+                <p className="text-zinc-500 text-xs">I review every roast personally and sometimes share extra tips. No spam, just founder-to-founder.</p>
+              </div>
+            </div>
             
-            <p class="note">
-                ⚡ Make sure we're connected or I can't reach you
+            <input
+              type="url"
+              placeholder="https://linkedin.com/in/yourprofile"
+              value={linkedinUrl}
+              onChange={(e) => {
+                setLinkedinUrl(e.target.value);
+                setLinkedinError(null);
+              }}
+              className={`w-full px-4 py-3 bg-zinc-900 border rounded-xl text-sm focus:outline-none transition-colors ${
+                linkedinError 
+                  ? 'border-red-500 focus:border-red-500' 
+                  : validation.valid 
+                    ? 'border-green-500 focus:border-green-500'
+                    : 'border-zinc-700 focus:border-pink-500'
+              }`}
+            />
+            
+            {linkedinError && (
+              <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {linkedinError}
+              </p>
+            )}
+            
+            {validation.valid && !linkedinError && (
+              <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
+                <Check className="w-3 h-3" />
+                Valid LinkedIn profile URL
+              </p>
+            )}
+            
+            <p className="text-zinc-600 text-xs mt-3">
+              Example: linkedin.com/in/johndoe
             </p>
+          </div>
+
+          {/* Preview of what's coming */}
+          <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
+            <p className="text-zinc-500 text-xs mb-2">Your roast preview:</p>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-300 text-sm">Overall Score</span>
+              <span className={`px-2 py-1 rounded text-sm font-bold ${
+                roastResult?.overall_score <= 3 ? 'text-red-400 bg-red-500/20' :
+                roastResult?.overall_score <= 6 ? 'text-pink-400 bg-pink-500/20' :
+                'text-green-400 bg-green-500/20'
+              }`}>
+                {roastResult?.overall_score}/10
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLinkedInSubmit}
+            disabled={!linkedinUrl || isSendingEmail}
+            className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+              linkedinUrl && !isSendingEmail
+                ? 'bg-gradient-to-r from-pink-500 to-rose-500 hover:scale-[1.02] shadow-lg shadow-pink-500/25'
+                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+            }`}
+          >
+            {isSendingEmail ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Unlocking results...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                See My Roast Results
+              </>
+            )}
+          </button>
+          
+          <p className="text-center text-zinc-600 text-xs mt-4">
+            We respect your privacy. No spam, ever.
+          </p>
         </div>
+      </div>
+    );
+  }
 
-        <!-- Step 3: Success -->
-        <div class="step" id="step3">
-            <div class="emoji">✅</div>
-            <h1>Roast incoming.</h1>
-            <p class="subtitle">Check your LinkedIn DMs. No sugarcoating.</p>
-        </div>
-    </div>
+  // Results
+  if (currentView === 'results' && roastResult) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white p-5 overflow-auto">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Flame className="w-7 h-7 text-pink-500" />
+              <span className="text-lg font-bold">AdRoast</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => copyToClipboard(shareLink, 'share')}
+                className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs"
+              >
+                {copied.share ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                Share
+              </button>
+              <button
+                onClick={resetApp}
+                className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-red-500 rounded-lg text-xs font-medium"
+              >
+                <RotateCcw className="w-3 h-3" />
+                New Roast
+              </button>
+            </div>
+          </div>
 
-    <script>
-        const step1 = document.getElementById('step1');
-        const step2 = document.getElementById('step2');
-        const step3 = document.getElementById('step3');
-        const form1 = document.getElementById('form1');
-        const form2 = document.getElementById('form2');
-        const submitBtn = document.getElementById('submitBtn');
+          {/* ICP Context */}
+          <div className="mb-4 p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+            <p className="text-xs text-zinc-500">
+              <span className="text-zinc-400">Target ICP:</span> {icpDescription.slice(0, 100)}{icpDescription.length > 100 ? '...' : ''}
+            </p>
+          </div>
 
-        let adLibraryUrl = '';
+          {/* Score Card */}
+          <div className="p-5 bg-gradient-to-r from-pink-500/10 to-red-500/10 border border-pink-500/30 rounded-2xl mb-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-2 py-0.5 bg-zinc-800 rounded text-xs capitalize">{platform}</span>
+                  <span className="px-2 py-0.5 bg-zinc-800 rounded text-xs capitalize">{offerType}</span>
+                </div>
+                <h1 className="text-xl font-bold mb-2">The Verdict</h1>
+                <p className="text-pink-400 font-medium">"{roastResult.icp_mismatch}"</p>
+              </div>
+              <div className="text-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold ${getScoreColor(roastResult.overall_score)}`}>
+                  {roastResult.overall_score}
+                </div>
+                <span className="text-xs text-zinc-400 mt-1 block">/10</span>
+              </div>
+            </div>
+          </div>
 
-        form1.addEventListener('submit', (e) => {
-            e.preventDefault();
-            adLibraryUrl = document.getElementById('ad_library_url').value;
-            step1.classList.remove('active');
-            step2.classList.add('active');
-        });
+          {/* Issues */}
+          <div className="mb-6">
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-sm">
+              <AlertCircle className="w-4 h-4 text-pink-400" />
+              5 Critical Issues
+            </h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {roastResult.issues.map((issue, i) => {
+                const Icon = issueIcons[issue.category] || AlertCircle;
+                return (
+                  <div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Icon className="w-4 h-4 text-zinc-400" />
+                        <span className="font-medium text-xs">{issue.title}</span>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(issue.score)}`}>
+                        {issue.score}
+                      </span>
+                    </div>
+                    <p className="text-zinc-400 text-xs leading-relaxed">{issue.explanation}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-        form2.addEventListener('submit', (e) => {
-            e.preventDefault();
+          {/* Fix Kit */}
+          <div className="mb-6">
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-sm">
+              <Zap className="w-4 h-4 text-pink-400" />
+              Fix Kit — Rewritten for Your ICP
+            </h2>
             
-            const linkedinProfile = document.getElementById('linkedin_profile').value;
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Sending...';
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                <h3 className="font-medium text-xs text-zinc-400 uppercase tracking-wide mb-3">Headlines</h3>
+                <div className="space-y-2">
+                  {roastResult.fix_kit.headlines.map((h, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg group">
+                      <span className="text-sm">{h}</span>
+                      <button
+                        onClick={() => copyToClipboard(h, `h-${i}`)}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-zinc-700 rounded"
+                      >
+                        {copied[`h-${i}`] ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            const formData = new FormData();
-            formData.append('ad_library_url', adLibraryUrl);
-            formData.append('linkedin_profile', linkedinProfile);
-            formData.append('_subject', '🔥 New Ad Roast Request');
-            formData.append('_captcha', 'false');
-            formData.append('_template', 'table');
+              <div className="space-y-3">
+                <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-xs text-zinc-400 uppercase tracking-wide">Body</h3>
+                    <button onClick={() => copyToClipboard(roastResult.fix_kit.body, 'body')} className="p-1.5 hover:bg-zinc-800 rounded">
+                      {copied.body ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
+                  <p className="text-sm text-zinc-300">{roastResult.fix_kit.body}</p>
+                </div>
 
-            fetch('https://formsubmit.co/ajax/marina.kogan@brandswithpurpose.us', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                step2.classList.remove('active');
-                step3.classList.add('active');
-            })
-            .catch(error => {
-                step2.classList.remove('active');
-                step3.classList.add('active');
-            });
-        });
-    </script>
-</body>
-</html>
+                <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  <h3 className="font-medium text-xs text-zinc-400 uppercase tracking-wide mb-2">CTAs</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {roastResult.fix_kit.ctas.map((cta, i) => (
+                      <button
+                        key={i}
+                        onClick={() => copyToClipboard(cta, `cta-${i}`)}
+                        className="px-3 py-1.5 bg-pink-500/20 text-pink-400 rounded-lg text-sm font-medium hover:bg-pink-500/30 flex items-center gap-1.5"
+                      >
+                        {cta}
+                        {copied[`cta-${i}`] ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rationale */}
+            <div className="mt-3 p-3 bg-zinc-800/30 rounded-lg">
+              <p className="text-xs text-zinc-400">
+                <span className="text-pink-400 font-medium">Why these changes:</span> {roastResult.fix_kit.rationale}
+              </p>
+            </div>
+          </div>
+
+          {/* Experiments */}
+          <div className="mb-6">
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-sm">
+              <Sparkles className="w-4 h-4 text-pink-400" />
+              3 Experiments to Run
+            </h2>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {roastResult.experiments.map((exp, i) => (
+                <div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">
+                      {i + 1}
+                    </div>
+                    <h3 className="font-medium text-sm">{exp.title}</h3>
+                  </div>
+                  <p className="text-zinc-400 text-xs">{exp.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Next Steps */}
+          <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+            <h2 className="font-bold mb-3 flex items-center gap-2 text-sm">
+              <ArrowRight className="w-4 h-4 text-pink-400" />
+              Next Steps
+            </h2>
+            <div className="space-y-2">
+              {roastResult.next_steps.map((step, i) => (
+                <label key={i} className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-pink-500" />
+                  <span className="text-zinc-300 text-sm group-hover:text-white">{step}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
