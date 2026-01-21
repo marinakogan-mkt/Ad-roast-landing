@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AdRoast - Brutally Honest Ad Feedback for SaaS Founders</title>
-  <meta name="description" content="Get a brutally honest AI roast of your ads — analyzed against YOUR specific ICP. Walk away with copy that actually speaks to your customers.">
+  <meta name="description" content="Get a brutally honest AI roast of your ads — analyzed against YOUR specific ICP.">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -20,7 +20,6 @@
 </head>
 <body>
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState } = React;
 
@@ -33,7 +32,6 @@
         chevronRight: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>,
         copy: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
         check: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
-        share: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>,
         alertCircle: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
         sparkles: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>,
         zap: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
@@ -47,561 +45,211 @@
       return icons[name] || null;
     };
 
-    const EMAIL_CONFIG = {
-      emailjs_service_id: 'service_ywioabe',
-      emailjs_template_id: 'template_gtqow85', 
-      emailjs_public_key: '964Wa83HevoEa5KnS',
-      notify_email: 'marina.kogan@brandswithpurpose.us'
-    };
+    const EMAIL_CONFIG = { service_id: 'service_ywioabe', template_id: 'template_gtqow85', public_key: '964Wa83HevoEa5KnS', notify_email: 'marina.kogan@brandswithpurpose.us' };
 
-    const validateLinkedInUrl = (url) => {
+    const validateLinkedIn = (url) => {
       if (!url) return { valid: false, error: 'LinkedIn URL is required' };
-      const trimmedUrl = url.trim().toLowerCase();
-      const linkedInPattern = /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[\w-]{3,100}\/?$/i;
-      if (!linkedInPattern.test(trimmedUrl)) {
-        if (trimmedUrl.includes('linkedin.com') && !trimmedUrl.includes('/in/')) {
-          return { valid: false, error: 'Please use your profile URL (linkedin.com/in/yourname)' };
-        }
-        return { valid: false, error: 'Enter a valid LinkedIn profile URL' };
+      if (!/^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[\w-]{3,100}\/?$/i.test(url.trim())) {
+        return { valid: false, error: url.includes('linkedin.com') ? 'Use your profile URL (linkedin.com/in/yourname)' : 'Enter a valid LinkedIn URL' };
       }
-      return { valid: true, error: null };
+      return { valid: true };
     };
 
-    const sendEmailNotification = async (data) => {
-      const { linkedinUrl, platform, offerType, icpDescription, inputs, roastResult } = data;
-      const emailContent = `🔥 NEW AD ROAST COMPLETED\n========================\n\n👤 LINKEDIN: ${linkedinUrl}\n\n📋 DETAILS\nPlatform: ${platform}\nOffer: ${offerType}\nICP: ${icpDescription}\n\n📝 INPUTS\nLanding: ${inputs.landingUrl || 'Not provided'}\nCopy: ${inputs.adCopy || 'Not provided'}\nVisual: ${inputs.visualDescription || 'Not provided'}\nImage: ${inputs.adImage ? 'Yes' : 'No'}\n\n📊 RESULTS\nScore: ${roastResult.overall_score}/10\nMismatch: ${roastResult.icp_mismatch}\n\n🚨 ISSUES\n${roastResult.issues.map((issue, i) => `${i + 1}. ${issue.title}: ${issue.score}/10 - ${issue.explanation}`).join('\n')}\n\n✏️ FIX KIT\nHeadlines:\n${roastResult.fix_kit.headlines.map((h, i) => `  ${i + 1}. ${h}`).join('\n')}\n\nBody: ${roastResult.fix_kit.body}\n\nCTAs: ${roastResult.fix_kit.ctas.join(', ')}\n\nRationale: ${roastResult.fix_kit.rationale}\n\n🧪 EXPERIMENTS\n${roastResult.experiments.map((exp, i) => `${i + 1}. ${exp.title}: ${exp.description}`).join('\n')}\n\n✅ NEXT STEPS\n${roastResult.next_steps.map((step, i) => `${i + 1}. ${step}`).join('\n')}`;
-
+    const sendEmail = async (data) => {
       try {
-        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            service_id: EMAIL_CONFIG.emailjs_service_id,
-            template_id: EMAIL_CONFIG.emailjs_template_id,
-            user_id: EMAIL_CONFIG.emailjs_public_key,
-            template_params: {
-              to_email: EMAIL_CONFIG.notify_email,
-              subject: `🔥 New Ad Roast: ${platform} | Score: ${roastResult.overall_score}/10 | ${linkedinUrl}`,
-              message: emailContent
-            }
+            service_id: EMAIL_CONFIG.service_id, template_id: EMAIL_CONFIG.template_id, user_id: EMAIL_CONFIG.public_key,
+            template_params: { to_email: EMAIL_CONFIG.notify_email, subject: `🔥 AdRoast: ${data.platform} | ${data.score}/10 | ${data.linkedin}`, message: `LinkedIn: ${data.linkedin}\nPlatform: ${data.platform}\nOffer: ${data.offer}\nICP: ${data.icp}\nScore: ${data.score}/10\nVerdict: ${data.verdict}\n\nHeadlines:\n${data.headlines.join('\n')}\n\nBody: ${data.body}\nCTAs: ${data.ctas.join(', ')}` }
           })
         });
-        return response.ok;
-      } catch (error) {
-        console.error('Email error:', error);
-        return false;
-      }
+      } catch (e) { console.error('Email error:', e); }
     };
 
-    const getScoreColor = (score) => {
-      if (score <= 3) return 'text-red-400 bg-red-500/20';
-      if (score <= 6) return 'text-pink-400 bg-pink-500/20';
-      return 'text-green-400 bg-green-500/20';
-    };
+    const getScoreColor = (s) => s <= 3 ? 'text-red-400 bg-red-500/20' : s <= 6 ? 'text-pink-400 bg-pink-500/20' : 'text-green-400 bg-green-500/20';
 
-    function AdRoastApp() {
-      const [currentView, setCurrentView] = useState('landing');
+    function App() {
+      const [view, setView] = useState('landing');
       const [platform, setPlatform] = useState(null);
       const [offerType, setOfferType] = useState(null);
-      const [icpDescription, setIcpDescription] = useState('');
-      const [linkedinUrl, setLinkedinUrl] = useState('');
-      const [linkedinError, setLinkedinError] = useState(null);
-      const [isSendingEmail, setIsSendingEmail] = useState(false);
-      const [inputs, setInputs] = useState({ landingUrl: '', adImage: null, adImagePreview: null, adCopy: '', visualDescription: '' });
-      const [roastResult, setRoastResult] = useState(null);
+      const [icp, setIcp] = useState('');
+      const [linkedin, setLinkedin] = useState('');
+      const [linkedinErr, setLinkedinErr] = useState(null);
+      const [sending, setSending] = useState(false);
+      const [inputs, setInputs] = useState({ url: '', image: null, imagePreview: null, copy: '', visual: '' });
+      const [result, setResult] = useState(null);
       const [copied, setCopied] = useState({});
-      const [isLoading, setIsLoading] = useState(false);
       const [error, setError] = useState(null);
-      const [shareLink, setShareLink] = useState(null);
 
-      const hasValidInput = inputs.landingUrl.trim() || inputs.adImage || (inputs.adCopy.length > 20);
-      const canProceedFromOnboarding = platform && offerType && icpDescription.length > 10;
+      const hasInput = inputs.url.trim() || inputs.image || inputs.copy.length > 20;
+      const canProceed = platform && offerType && icp.length > 10;
 
-      const handleImageUpload = (e) => {
+      const handleImage = (e) => {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
-          reader.onloadend = () => setInputs(prev => ({ ...prev, adImage: file, adImagePreview: reader.result }));
+          reader.onloadend = () => setInputs(p => ({ ...p, image: file, imagePreview: reader.result }));
           reader.readAsDataURL(file);
         }
       };
 
-      const copyToClipboard = async (text, key) => {
+      const copy = async (text, key) => {
         await navigator.clipboard.writeText(text);
-        setCopied(prev => ({ ...prev, [key]: true }));
-        setTimeout(() => setCopied(prev => ({ ...prev, [key]: false })), 2000);
+        setCopied(p => ({ ...p, [key]: true }));
+        setTimeout(() => setCopied(p => ({ ...p, [key]: false })), 2000);
       };
 
-      const generateRoast = async () => {
-        setIsLoading(true);
+      const generate = async () => {
         setError(null);
-        setCurrentView('processing');
-
-        const systemPrompt = `You are AdRoast, a brutally honest ad performance analyst. You help SaaS founders improve their paid ads. CRITICAL: The user will tell you WHO their ads are targeting (their ICP). Your job is to analyze whether the ad effectively speaks to THAT specific audience. Your approach: Direct, no fluff, slightly sarcastic but never mean. Use the "barbecue test": would this make sense at a casual BBQ? Always tie feedback to specific, fixable actions. Cite specific words/phrases from their copy when critiquing. Scoring rubric (1-10): 1-3: Actively hurting conversions, 4-6: Generic, forgettable, 7-8: Solid, minor optimizations, 9-10: Best-in-class. Return ONLY valid JSON, no markdown.`;
-
-        const userPrompt = `Analyze this ad. The founder's target customer (ICP) is: "${icpDescription}"
-
-Platform: ${platform}
-Offer Type: ${offerType}
-${inputs.landingUrl ? `Landing Page URL: ${inputs.landingUrl}` : ''}
-${inputs.adCopy ? `Ad Copy: ${inputs.adCopy}` : ''}
-${inputs.visualDescription ? `Visual Description: ${inputs.visualDescription}` : ''}
-${inputs.adImage ? `Image uploaded: Yes` : ''}
-
-Return JSON:
-{
-  "icp_mismatch": "Single sentence about whether this ad speaks to ${icpDescription} or who it accidentally targets",
-  "overall_score": <1-10>,
-  "issues": [
-    {"category": "headline_clarity", "title": "Headline Clarity", "score": <1-10>, "explanation": "specific feedback"},
-    {"category": "cta_friction", "title": "CTA Friction", "score": <1-10>, "explanation": "specific feedback"},
-    {"category": "visual_copy_match", "title": "Visual-Copy Match", "score": <1-10>, "explanation": "specific feedback"},
-    {"category": "benefit_specificity", "title": "Benefit Specificity", "score": <1-10>, "explanation": "specific feedback"},
-    {"category": "trust_signals", "title": "Trust Signals", "score": <1-10>, "explanation": "specific feedback"}
-  ],
-  "fix_kit": {
-    "headlines": ["Headline 1", "Headline 2", "Headline 3"],
-    "body": "Rewritten body copy",
-    "ctas": ["CTA 1", "CTA 2"],
-    "rationale": "Why these changes work"
-  },
-  "experiments": [
-    {"title": "Experiment 1", "description": "What to test"},
-    {"title": "Experiment 2", "description": "What to test"},
-    {"title": "Experiment 3", "description": "What to test"}
-  ],
-  "next_steps": ["Action 1", "Action 2", "Action 3", "Action 4"]
-}
-
-Be harsh but fair. Most ads deserve 4-6. Quote their copy when critiquing.`;
-
+        setView('processing');
         try {
-          const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 2000,
-              system: systemPrompt,
-              messages: [{ role: "user", content: userPrompt }]
-            })
+          const res = await fetch('/api/roast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform, offerType, icpDescription: icp, landingUrl: inputs.url, adCopy: inputs.copy, visualDescription: inputs.visual, hasImage: !!inputs.image })
           });
-
-          const data = await response.json();
-          
-          if (data.content && data.content[0] && data.content[0].text) {
-            const jsonMatch = data.content[0].text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const result = JSON.parse(jsonMatch[0]);
-              setRoastResult(result);
-              setShareLink(`https://adroast.ai/r/${Math.random().toString(36).substr(2, 9)}`);
-              setCurrentView('linkedin');
-            } else {
-              throw new Error('Could not parse response');
-            }
-          } else {
-            throw new Error('Invalid response');
-          }
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'API error');
+          setResult(data);
+          setView('linkedin');
         } catch (err) {
-          console.error('Error:', err);
-          setError('Failed to generate roast. Please try again.');
-          setCurrentView('input');
-        } finally {
-          setIsLoading(false);
+          setError(err.message);
+          setView('input');
         }
       };
 
-      const resetApp = () => {
-        setCurrentView('landing');
-        setPlatform(null);
-        setOfferType(null);
-        setIcpDescription('');
-        setLinkedinUrl('');
-        setLinkedinError(null);
-        setInputs({ landingUrl: '', adImage: null, adImagePreview: null, adCopy: '', visualDescription: '' });
-        setRoastResult(null);
-        setShareLink(null);
-        setError(null);
+      const reset = () => {
+        setView('landing'); setPlatform(null); setOfferType(null); setIcp('');
+        setLinkedin(''); setLinkedinErr(null); setResult(null); setError(null);
+        setInputs({ url: '', image: null, imagePreview: null, copy: '', visual: '' });
       };
 
-      const handleLinkedInSubmit = async () => {
-        const validation = validateLinkedInUrl(linkedinUrl);
-        if (!validation.valid) { setLinkedinError(validation.error); return; }
-        setLinkedinError(null);
-        setIsSendingEmail(true);
-        try { await sendEmailNotification({ linkedinUrl, platform, offerType, icpDescription, inputs, roastResult }); } catch (err) { console.error('Failed to send email:', err); }
-        setIsSendingEmail(false);
-        setCurrentView('results');
+      const submitLinkedIn = async () => {
+        const v = validateLinkedIn(linkedin);
+        if (!v.valid) { setLinkedinErr(v.error); return; }
+        setLinkedinErr(null); setSending(true);
+        await sendEmail({ linkedin, platform, offer: offerType, icp, score: result.overall_score, verdict: result.icp_mismatch, headlines: result.fix_kit.headlines, body: result.fix_kit.body, ctas: result.fix_kit.ctas });
+        setSending(false); setView('results');
       };
 
       // LANDING
-      if (currentView === 'landing') {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white overflow-auto">
-            <div className="absolute top-20 left-10 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-20 right-10 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 max-w-5xl mx-auto px-6 py-10">
-              <header className="flex items-center justify-between mb-16">
-                <div className="flex items-center gap-2">
-                  <Icon name="flame" className="w-8 h-8 text-pink-500" />
-                  <span className="text-xl font-bold tracking-tight">AdRoast</span>
-                </div>
-              </header>
-              <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/30 rounded-full mb-6">
-                  <Icon name="flame" className="w-4 h-4 text-pink-400" />
-                  <span className="text-pink-400 text-sm font-medium">For SaaS Founders Running Ads</span>
-                </div>
-                <h1 className="text-4xl md:text-6xl font-bold mb-5 leading-tight tracking-tight">
-                  Your ads aren't converting.<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-red-500 to-pink-400">Let's find out why.</span>
-                </h1>
-                <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-10">Get a brutally honest AI roast of your ads — analyzed against YOUR specific ICP. Walk away with copy that actually speaks to your customers.</p>
-                <button onClick={() => setCurrentView('onboarding')} className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-500 to-red-500 rounded-xl font-semibold text-lg hover:scale-105 transition-transform shadow-lg shadow-pink-500/25">
-                  <Icon name="flame" className="w-5 h-5" />
-                  Roast My Ad
-                  <Icon name="chevronRight" className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-                <p className="text-zinc-500 mt-4 text-sm">Free • No signup required</p>
-              </div>
-              <div className="grid md:grid-cols-4 gap-4">
-                {[
-                  { icon: 'users', title: "ICP-Specific Analysis", desc: "Roast based on YOUR target customer" },
-                  { icon: 'alertCircle', title: "5 Critical Issues", desc: "Scored 1-10 with quotes from your copy" },
-                  { icon: 'zap', title: "Fix Kit", desc: "Ready-to-paste headlines and CTAs" },
-                  { icon: 'sparkles', title: "3 Experiments", desc: "Testable hypotheses for this week" },
-                ].map((feature, i) => (
-                  <div key={i} className="p-4 bg-zinc-900/50 border border-zinc-800/50 rounded-xl hover:border-pink-500/30 transition-colors">
-                    <Icon name={feature.icon} className="w-7 h-7 text-pink-400 mb-3" />
-                    <h3 className="font-semibold mb-1 text-sm">{feature.title}</h3>
-                    <p className="text-zinc-500 text-xs">{feature.desc}</p>
-                  </div>
-                ))}
-              </div>
+      if (view === 'landing') return (
+        <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white overflow-auto">
+          <div className="absolute top-20 left-10 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-20 right-10 w-80 h-80 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 max-w-5xl mx-auto px-6 py-10">
+            <header className="flex items-center gap-2 mb-16"><Icon name="flame" className="w-8 h-8 text-pink-500" /><span className="text-xl font-bold">AdRoast</span></header>
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/30 rounded-full mb-6"><Icon name="flame" className="w-4 h-4 text-pink-400" /><span className="text-pink-400 text-sm font-medium">For SaaS Founders Running Ads</span></div>
+              <h1 className="text-4xl md:text-6xl font-bold mb-5 leading-tight">Your ads aren't converting.<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-red-500 to-pink-400">Let's find out why.</span></h1>
+              <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-10">Get a brutally honest AI roast of your ads — analyzed against YOUR specific ICP.</p>
+              <button onClick={() => setView('onboarding')} className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-pink-500 to-red-500 rounded-xl font-semibold text-lg hover:scale-105 transition-transform shadow-lg shadow-pink-500/25"><Icon name="flame" className="w-5 h-5" />Roast My Ad<Icon name="chevronRight" className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></button>
+              <p className="text-zinc-500 mt-4 text-sm">Free • No signup required</p>
+            </div>
+            <div className="grid md:grid-cols-4 gap-4">
+              {[{ icon: 'users', title: "ICP-Specific", desc: "Roast based on YOUR customer" },{ icon: 'alertCircle', title: "5 Issues", desc: "Scored 1-10 with quotes" },{ icon: 'zap', title: "Fix Kit", desc: "Ready-to-paste copy" },{ icon: 'sparkles', title: "Experiments", desc: "3 testable ideas" }].map((f, i) => (
+                <div key={i} className="p-4 bg-zinc-900/50 border border-zinc-800/50 rounded-xl hover:border-pink-500/30 transition-colors"><Icon name={f.icon} className="w-7 h-7 text-pink-400 mb-3" /><h3 className="font-semibold mb-1 text-sm">{f.title}</h3><p className="text-zinc-500 text-xs">{f.desc}</p></div>
+              ))}
             </div>
           </div>
-        );
-      }
+        </div>
+      );
 
       // ONBOARDING
-      if (currentView === 'onboarding') {
-        return (
-          <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6 overflow-auto">
-            <div className="max-w-md w-full">
-              <div className="text-center mb-10">
-                <div className="flex items-center justify-center gap-2 mb-5">
-                  <Icon name="flame" className="w-7 h-7 text-pink-500" />
-                  <span className="text-lg font-bold">AdRoast</span>
-                </div>
-                <h1 className="text-2xl font-bold mb-2">Tell Us About Your Ad</h1>
-                <p className="text-zinc-400 text-sm">So we can roast it properly</p>
-              </div>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2">
-                    <Icon name="users" className="w-4 h-4 text-pink-400" />
-                    Who is your ad targeting? (Your ICP)
-                  </label>
-                  <textarea placeholder="e.g., Engineering managers at Series B+ startups who are frustrated with slow CI/CD pipelines..." value={icpDescription} onChange={(e) => setIcpDescription(e.target.value)} className="w-full h-24 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-pink-500 resize-none placeholder:text-zinc-600" />
-                  <p className="text-xs text-zinc-500 mt-1.5">Be specific: job title, company size, pain points, buying triggers</p>
-                  {icpDescription.length > 0 && icpDescription.length < 10 && <p className="text-xs text-pink-400 mt-1">Need more detail to give a useful roast</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Platform</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['Meta', 'Google', 'LinkedIn'].map((p) => (
-                      <button key={p} onClick={() => setPlatform(p.toLowerCase())} className={`p-3 rounded-xl border-2 transition-all font-medium text-sm ${platform === p.toLowerCase() ? 'border-pink-500 bg-pink-500/10 text-pink-400' : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'}`}>{p}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Offer Type</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[{ id: 'demo', label: 'Book a Demo' }, { id: 'trial', label: 'Free Trial' }].map((offer) => (
-                      <button key={offer.id} onClick={() => setOfferType(offer.id)} className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${offerType === offer.id ? 'border-pink-500 bg-pink-500/10 text-pink-400' : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'}`}>{offer.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <button onClick={() => setCurrentView('input')} disabled={!canProceedFromOnboarding} className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${canProceedFromOnboarding ? 'bg-gradient-to-r from-pink-500 to-red-500 hover:scale-[1.02]' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}>
-                  Continue <Icon name="chevronRight" className="w-5 h-5" />
-                </button>
-                {!canProceedFromOnboarding && <p className="text-center text-zinc-500 text-xs">{!icpDescription || icpDescription.length < 10 ? "Describe your target customer to continue" : "Select platform and offer type"}</p>}
-              </div>
+      if (view === 'onboarding') return (
+        <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
+          <div className="max-w-md w-full">
+            <div className="text-center mb-10"><div className="flex items-center justify-center gap-2 mb-5"><Icon name="flame" className="w-7 h-7 text-pink-500" /><span className="text-lg font-bold">AdRoast</span></div><h1 className="text-2xl font-bold mb-2">Tell Us About Your Ad</h1></div>
+            <div className="space-y-5">
+              <div><label className="block text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2"><Icon name="users" className="w-4 h-4 text-pink-400" />Who is your ad targeting?</label><textarea placeholder="e.g., Engineering managers at Series B+ startups frustrated with slow CI/CD..." value={icp} onChange={(e) => setIcp(e.target.value)} className="w-full h-24 px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-pink-500 resize-none" /><p className="text-xs text-zinc-500 mt-1.5">Be specific: job title, company size, pain points</p></div>
+              <div><label className="block text-sm font-medium text-zinc-400 mb-2">Platform</label><div className="grid grid-cols-3 gap-2">{['Meta', 'Google', 'LinkedIn'].map((p) => (<button key={p} onClick={() => setPlatform(p.toLowerCase())} className={`p-3 rounded-xl border-2 font-medium text-sm ${platform === p.toLowerCase() ? 'border-pink-500 bg-pink-500/10 text-pink-400' : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'}`}>{p}</button>))}</div></div>
+              <div><label className="block text-sm font-medium text-zinc-400 mb-2">Offer Type</label><div className="grid grid-cols-2 gap-2">{[{ id: 'demo', label: 'Book a Demo' }, { id: 'trial', label: 'Free Trial' }].map((o) => (<button key={o.id} onClick={() => setOfferType(o.id)} className={`p-3 rounded-xl border-2 text-sm font-medium ${offerType === o.id ? 'border-pink-500 bg-pink-500/10 text-pink-400' : 'border-zinc-800 hover:border-zinc-700 text-zinc-300'}`}>{o.label}</button>))}</div></div>
+              <button onClick={() => setView('input')} disabled={!canProceed} className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 ${canProceed ? 'bg-gradient-to-r from-pink-500 to-red-500 hover:scale-[1.02]' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}>Continue <Icon name="chevronRight" className="w-5 h-5" /></button>
             </div>
           </div>
-        );
-      }
+        </div>
+      );
 
       // INPUT
-      if (currentView === 'input') {
-        return (
-          <div className="min-h-screen bg-zinc-950 text-white p-5 overflow-auto">
-            <div className="max-w-3xl mx-auto">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <Icon name="flame" className="w-7 h-7 text-pink-500" />
-                  <span className="text-lg font-bold">AdRoast</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-zinc-800 rounded text-xs capitalize">{platform}</span>
-                  <span className="px-2 py-1 bg-zinc-800 rounded text-xs capitalize">{offerType}</span>
-                </div>
-              </div>
-              <div className="mb-6 p-3 bg-pink-500/10 border border-pink-500/30 rounded-xl">
-                <div className="flex items-start gap-2">
-                  <Icon name="users" className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-pink-400 font-medium">Targeting: {icpDescription.slice(0, 80)}{icpDescription.length > 80 ? '...' : ''}</p>
-                    <button onClick={() => setCurrentView('onboarding')} className="text-xs text-zinc-400 hover:text-white mt-1">Edit ICP →</button>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold mb-2">Feed the Fire</h1>
-                <p className="text-zinc-400 text-sm">Provide at least one input</p>
-              </div>
-              {error && <div className="mb-5 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 flex items-center gap-2 text-sm"><Icon name="alertCircle" className="w-4 h-4" />{error}</div>}
-              <div className="space-y-4 mb-6">
-                <div className={`p-4 rounded-xl border transition-all ${inputs.landingUrl ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Icon name="link" className={`w-5 h-5 ${inputs.landingUrl ? 'text-green-400' : 'text-zinc-400'}`} />
-                    <span className="font-medium text-sm">Landing Page URL</span>
-                    {inputs.landingUrl && <Icon name="check" className="w-4 h-4 text-green-400 ml-auto" />}
-                  </div>
-                  <input type="url" placeholder="https://your-landing-page.com" value={inputs.landingUrl} onChange={(e) => setInputs(prev => ({ ...prev, landingUrl: e.target.value }))} className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500" />
-                </div>
-                <div className={`p-4 rounded-xl border transition-all ${inputs.adImage ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Icon name="upload" className={`w-5 h-5 ${inputs.adImage ? 'text-green-400' : 'text-zinc-400'}`} />
-                    <span className="font-medium text-sm">Ad Creative</span>
-                    {inputs.adImage && <Icon name="check" className="w-4 h-4 text-green-400 ml-auto" />}
-                  </div>
-                  {inputs.adImagePreview ? (
-                    <div className="relative">
-                      <img src={inputs.adImagePreview} alt="Ad" className="w-full h-28 object-cover rounded-lg" />
-                      <button onClick={() => setInputs(prev => ({ ...prev, adImage: null, adImagePreview: null }))} className="absolute top-1 right-1 w-6 h-6 bg-zinc-900/80 rounded-full flex items-center justify-center"><Icon name="x" className="w-4 h-4" /></button>
-                    </div>
-                  ) : (
-                    <label className="block w-full py-6 border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer hover:border-zinc-600 text-center">
-                      <Icon name="upload" className="w-5 h-5 mx-auto mb-1 text-zinc-500" />
-                      <span className="text-zinc-500 text-xs">Click to upload</span>
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    </label>
-                  )}
-                  {inputs.adImage && <input type="text" placeholder="Describe the image briefly..." value={inputs.visualDescription} onChange={(e) => setInputs(prev => ({ ...prev, visualDescription: e.target.value }))} className="w-full mt-3 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500" />}
-                </div>
-                <div className={`p-4 rounded-xl border transition-all ${inputs.adCopy.length > 20 ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Icon name="fileText" className={`w-5 h-5 ${inputs.adCopy.length > 20 ? 'text-green-400' : 'text-zinc-400'}`} />
-                    <span className="font-medium text-sm">Ad Copy</span>
-                    {inputs.adCopy.length > 20 && <Icon name="check" className="w-4 h-4 text-green-400 ml-auto" />}
-                  </div>
-                  <textarea placeholder="Paste your ad headline and body copy..." value={inputs.adCopy} onChange={(e) => setInputs(prev => ({ ...prev, adCopy: e.target.value }))} className="w-full h-24 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500 resize-none" />
-                  {inputs.adCopy.length > 0 && <span className="text-xs text-zinc-500 mt-1 block">{inputs.adCopy.length} characters</span>}
-                </div>
-              </div>
-              <button onClick={generateRoast} disabled={!hasValidInput} className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${hasValidInput ? 'bg-gradient-to-r from-pink-500 to-red-500 hover:scale-[1.01] shadow-lg shadow-pink-500/25' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}>
-                <Icon name="flame" className="w-5 h-5" />
-                Generate Roast
-              </button>
+      if (view === 'input') return (
+        <div className="min-h-screen bg-zinc-950 text-white p-5 overflow-auto">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between mb-6"><div className="flex items-center gap-2"><Icon name="flame" className="w-7 h-7 text-pink-500" /><span className="text-lg font-bold">AdRoast</span></div><div className="flex gap-2"><span className="px-2 py-1 bg-zinc-800 rounded text-xs capitalize">{platform}</span><span className="px-2 py-1 bg-zinc-800 rounded text-xs capitalize">{offerType}</span></div></div>
+            <div className="mb-6 p-3 bg-pink-500/10 border border-pink-500/30 rounded-xl"><div className="flex items-start gap-2"><Icon name="users" className="w-4 h-4 text-pink-400 mt-0.5" /><div><p className="text-sm text-pink-400 font-medium">Targeting: {icp.slice(0, 80)}{icp.length > 80 ? '...' : ''}</p><button onClick={() => setView('onboarding')} className="text-xs text-zinc-400 hover:text-white mt-1">Edit →</button></div></div></div>
+            <div className="text-center mb-8"><h1 className="text-2xl font-bold mb-2">Feed the Fire</h1><p className="text-zinc-400 text-sm">Provide at least one input</p></div>
+            {error && <div className="mb-5 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 flex items-center gap-2 text-sm"><Icon name="alertCircle" className="w-4 h-4" />{error}</div>}
+            <div className="space-y-4 mb-6">
+              <div className={`p-4 rounded-xl border ${inputs.url ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}><div className="flex items-center gap-2 mb-3"><Icon name="link" className={`w-5 h-5 ${inputs.url ? 'text-green-400' : 'text-zinc-400'}`} /><span className="font-medium text-sm">Landing Page URL</span>{inputs.url && <Icon name="check" className="w-4 h-4 text-green-400 ml-auto" />}</div><input type="url" placeholder="https://your-landing-page.com" value={inputs.url} onChange={(e) => setInputs(p => ({ ...p, url: e.target.value }))} className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500" /></div>
+              <div className={`p-4 rounded-xl border ${inputs.image ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}><div className="flex items-center gap-2 mb-3"><Icon name="upload" className={`w-5 h-5 ${inputs.image ? 'text-green-400' : 'text-zinc-400'}`} /><span className="font-medium text-sm">Ad Creative</span>{inputs.image && <Icon name="check" className="w-4 h-4 text-green-400 ml-auto" />}</div>{inputs.imagePreview ? (<div className="relative"><img src={inputs.imagePreview} alt="Ad" className="w-full h-28 object-cover rounded-lg" /><button onClick={() => setInputs(p => ({ ...p, image: null, imagePreview: null }))} className="absolute top-1 right-1 w-6 h-6 bg-zinc-900/80 rounded-full flex items-center justify-center"><Icon name="x" className="w-4 h-4" /></button></div>) : (<label className="block w-full py-6 border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer hover:border-zinc-600 text-center"><Icon name="upload" className="w-5 h-5 mx-auto mb-1 text-zinc-500" /><span className="text-zinc-500 text-xs">Click to upload</span><input type="file" accept="image/*" onChange={handleImage} className="hidden" /></label>)}{inputs.image && <input type="text" placeholder="Describe the image..." value={inputs.visual} onChange={(e) => setInputs(p => ({ ...p, visual: e.target.value }))} className="w-full mt-3 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500" />}</div>
+              <div className={`p-4 rounded-xl border ${inputs.copy.length > 20 ? 'border-green-500/50 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/30'}`}><div className="flex items-center gap-2 mb-3"><Icon name="fileText" className={`w-5 h-5 ${inputs.copy.length > 20 ? 'text-green-400' : 'text-zinc-400'}`} /><span className="font-medium text-sm">Ad Copy</span>{inputs.copy.length > 20 && <Icon name="check" className="w-4 h-4 text-green-400 ml-auto" />}</div><textarea placeholder="Paste your ad headline and body copy..." value={inputs.copy} onChange={(e) => setInputs(p => ({ ...p, copy: e.target.value }))} className="w-full h-24 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:border-pink-500 resize-none" /></div>
             </div>
+            <button onClick={generate} disabled={!hasInput} className={`w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 ${hasInput ? 'bg-gradient-to-r from-pink-500 to-red-500 hover:scale-[1.01] shadow-lg shadow-pink-500/25' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}><Icon name="flame" className="w-5 h-5" />Generate Roast</button>
           </div>
-        );
-      }
+        </div>
+      );
 
       // PROCESSING
-      if (currentView === 'processing') {
-        return (
-          <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
-            <div className="text-center">
-              <div className="relative w-24 h-24 mx-auto mb-6">
-                <div className="absolute inset-0 rounded-full border-4 border-zinc-800" />
-                <div className="absolute inset-0 rounded-full border-4 border-pink-500 border-t-transparent animate-spin" />
-                <Icon name="flame" className="absolute inset-0 m-auto w-10 h-10 text-pink-500" />
-              </div>
-              <h2 className="text-xl font-bold mb-3">Roasting your ad...</h2>
-              <div className="space-y-2 text-zinc-400 text-sm">
-                <p className="animate-pulse">Checking ICP alignment...</p>
-                <p className="animate-pulse">Finding messaging gaps...</p>
-                <p className="animate-pulse">Generating rewrites...</p>
-              </div>
-            </div>
+      if (view === 'processing') return (
+        <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
+          <div className="text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6"><div className="absolute inset-0 rounded-full border-4 border-zinc-800" /><div className="absolute inset-0 rounded-full border-4 border-pink-500 border-t-transparent animate-spin" /><Icon name="flame" className="absolute inset-0 m-auto w-10 h-10 text-pink-500" /></div>
+            <h2 className="text-xl font-bold mb-3">Roasting your ad...</h2>
+            <div className="space-y-2 text-zinc-400 text-sm"><p className="animate-pulse">Checking ICP alignment...</p><p className="animate-pulse">Finding messaging gaps...</p><p className="animate-pulse">Generating rewrites...</p></div>
           </div>
-        );
-      }
+        </div>
+      );
 
-      // LINKEDIN
-      if (currentView === 'linkedin') {
-        const validation = linkedinUrl ? validateLinkedInUrl(linkedinUrl) : { valid: false };
+      // LINKEDIN GATE
+      if (view === 'linkedin') {
+        const v = linkedin ? validateLinkedIn(linkedin) : { valid: false };
         return (
           <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6">
             <div className="max-w-md w-full">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-                  <Icon name="flame" className="w-8 h-8 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold mb-2">Your Roast is Ready! 🔥</h1>
-                <p className="text-zinc-400 text-sm">One last step before we reveal the results</p>
-              </div>
+              <div className="text-center mb-8"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center"><Icon name="flame" className="w-8 h-8 text-white" /></div><h1 className="text-2xl font-bold mb-2">Your Roast is Ready! 🔥</h1><p className="text-zinc-400 text-sm">One last step</p></div>
               <div className="p-6 bg-zinc-900/50 border border-zinc-800 rounded-2xl mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <Icon name="linkedin" className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Drop your LinkedIn</h3>
-                    <p className="text-zinc-500 text-xs">I review every roast personally and sometimes share extra tips. No spam, just founder-to-founder.</p>
-                  </div>
-                </div>
-                <input type="url" placeholder="https://linkedin.com/in/yourprofile" value={linkedinUrl} onChange={(e) => { setLinkedinUrl(e.target.value); setLinkedinError(null); }} className={`w-full px-4 py-3 bg-zinc-900 border rounded-xl text-sm focus:outline-none transition-colors ${linkedinError ? 'border-red-500' : validation.valid ? 'border-green-500' : 'border-zinc-700 focus:border-pink-500'}`} />
-                {linkedinError && <p className="text-red-400 text-xs mt-2 flex items-center gap-1"><Icon name="alertCircle" className="w-3 h-3" />{linkedinError}</p>}
-                {validation.valid && !linkedinError && <p className="text-green-400 text-xs mt-2 flex items-center gap-1"><Icon name="check" className="w-3 h-3" />Valid LinkedIn profile URL</p>}
-                <p className="text-zinc-600 text-xs mt-3">Example: linkedin.com/in/johndoe</p>
+                <div className="flex items-center gap-3 mb-4"><div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center"><Icon name="linkedin" className="w-5 h-5 text-blue-400" /></div><div><h3 className="font-semibold">Drop your LinkedIn</h3><p className="text-zinc-500 text-xs">I review every roast personally. No spam.</p></div></div>
+                <input type="url" placeholder="https://linkedin.com/in/yourprofile" value={linkedin} onChange={(e) => { setLinkedin(e.target.value); setLinkedinErr(null); }} className={`w-full px-4 py-3 bg-zinc-900 border rounded-xl text-sm focus:outline-none ${linkedinErr ? 'border-red-500' : v.valid ? 'border-green-500' : 'border-zinc-700 focus:border-pink-500'}`} />
+                {linkedinErr && <p className="text-red-400 text-xs mt-2 flex items-center gap-1"><Icon name="alertCircle" className="w-3 h-3" />{linkedinErr}</p>}
+                {v.valid && !linkedinErr && <p className="text-green-400 text-xs mt-2 flex items-center gap-1"><Icon name="check" className="w-3 h-3" />Valid LinkedIn URL</p>}
               </div>
-              <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6">
-                <p className="text-zinc-500 text-xs mb-2">Your roast preview:</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-300 text-sm">Overall Score</span>
-                  <span className={`px-2 py-1 rounded text-sm font-bold ${getScoreColor(roastResult?.overall_score)}`}>{roastResult?.overall_score}/10</span>
-                </div>
-              </div>
-              <button onClick={handleLinkedInSubmit} disabled={!linkedinUrl || isSendingEmail} className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${linkedinUrl && !isSendingEmail ? 'bg-gradient-to-r from-pink-500 to-rose-500 hover:scale-[1.02] shadow-lg shadow-pink-500/25' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}>
-                {isSendingEmail ? <><Icon name="loader" className="w-5 h-5" />Unlocking results...</> : <><Icon name="sparkles" className="w-5 h-5" />See My Roast Results</>}
-              </button>
-              <p className="text-center text-zinc-600 text-xs mt-4">We respect your privacy. No spam, ever.</p>
+              <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-xl mb-6"><p className="text-zinc-500 text-xs mb-2">Preview:</p><div className="flex items-center justify-between"><span className="text-zinc-300 text-sm">Overall Score</span><span className={`px-2 py-1 rounded text-sm font-bold ${getScoreColor(result?.overall_score)}`}>{result?.overall_score}/10</span></div></div>
+              <button onClick={submitLinkedIn} disabled={!linkedin || sending} className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 ${linkedin && !sending ? 'bg-gradient-to-r from-pink-500 to-rose-500 hover:scale-[1.02] shadow-lg shadow-pink-500/25' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'}`}>{sending ? <><Icon name="loader" className="w-5 h-5" />Unlocking...</> : <><Icon name="sparkles" className="w-5 h-5" />See My Roast</>}</button>
             </div>
           </div>
         );
       }
 
       // RESULTS
-      if (currentView === 'results' && roastResult) {
-        return (
-          <div className="min-h-screen bg-zinc-950 text-white p-5 overflow-auto">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <Icon name="flame" className="w-7 h-7 text-pink-500" />
-                  <span className="text-lg font-bold">AdRoast</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => copyToClipboard(shareLink, 'share')} className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-xs">
-                    <Icon name={copied.share ? 'check' : 'share'} className="w-3 h-3" />Share
-                  </button>
-                  <button onClick={resetApp} className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-red-500 rounded-lg text-xs font-medium">
-                    <Icon name="rotateCcw" className="w-3 h-3" />New Roast
-                  </button>
-                </div>
-              </div>
-              <div className="mb-4 p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg">
-                <p className="text-xs text-zinc-500"><span className="text-zinc-400">Target ICP:</span> {icpDescription.slice(0, 100)}{icpDescription.length > 100 ? '...' : ''}</p>
-              </div>
-              <div className="p-5 bg-gradient-to-r from-pink-500/10 to-red-500/10 border border-pink-500/30 rounded-2xl mb-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="px-2 py-0.5 bg-zinc-800 rounded text-xs capitalize">{platform}</span>
-                      <span className="px-2 py-0.5 bg-zinc-800 rounded text-xs capitalize">{offerType}</span>
-                    </div>
-                    <h1 className="text-xl font-bold mb-2">The Verdict</h1>
-                    <p className="text-pink-400 font-medium">"{roastResult.icp_mismatch}"</p>
-                  </div>
-                  <div className="text-center">
-                    <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold ${getScoreColor(roastResult.overall_score)}`}>{roastResult.overall_score}</div>
-                    <span className="text-xs text-zinc-400 mt-1 block">/10</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mb-6">
-                <h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="alertCircle" className="w-4 h-4 text-pink-400" />5 Critical Issues</h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {roastResult.issues.map((issue, i) => (
-                    <div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="font-medium text-xs">{issue.title}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(issue.score)}`}>{issue.score}</span>
-                      </div>
-                      <p className="text-zinc-400 text-xs leading-relaxed">{issue.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="mb-6">
-                <h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="zap" className="w-4 h-4 text-pink-400" />Fix Kit — Rewritten for Your ICP</h2>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                    <h3 className="font-medium text-xs text-zinc-400 uppercase tracking-wide mb-3">Headlines</h3>
-                    <div className="space-y-2">
-                      {roastResult.fix_kit.headlines.map((h, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg group">
-                          <span className="text-sm">{h}</span>
-                          <button onClick={() => copyToClipboard(h, `h-${i}`)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-zinc-700 rounded">
-                            <Icon name={copied[`h-${i}`] ? 'check' : 'copy'} className={`w-3 h-3 ${copied[`h-${i}`] ? 'text-green-400' : ''}`} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-medium text-xs text-zinc-400 uppercase tracking-wide">Body</h3>
-                        <button onClick={() => copyToClipboard(roastResult.fix_kit.body, 'body')} className="p-1.5 hover:bg-zinc-800 rounded">
-                          <Icon name={copied.body ? 'check' : 'copy'} className={`w-3 h-3 ${copied.body ? 'text-green-400' : ''}`} />
-                        </button>
-                      </div>
-                      <p className="text-sm text-zinc-300">{roastResult.fix_kit.body}</p>
-                    </div>
-                    <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                      <h3 className="font-medium text-xs text-zinc-400 uppercase tracking-wide mb-2">CTAs</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {roastResult.fix_kit.ctas.map((cta, i) => (
-                          <button key={i} onClick={() => copyToClipboard(cta, `cta-${i}`)} className="px-3 py-1.5 bg-pink-500/20 text-pink-400 rounded-lg text-sm font-medium hover:bg-pink-500/30 flex items-center gap-1.5">
-                            {cta}<Icon name={copied[`cta-${i}`] ? 'check' : 'copy'} className="w-3 h-3" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 p-3 bg-zinc-800/30 rounded-lg">
-                  <p className="text-xs text-zinc-400"><span className="text-pink-400 font-medium">Why these changes:</span> {roastResult.fix_kit.rationale}</p>
-                </div>
-              </div>
-              <div className="mb-6">
-                <h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="sparkles" className="w-4 h-4 text-pink-400" />3 Experiments to Run</h2>
-                <div className="grid sm:grid-cols-3 gap-3">
-                  {roastResult.experiments.map((exp, i) => (
-                    <div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-5 h-5 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">{i + 1}</div>
-                        <h3 className="font-medium text-sm">{exp.title}</h3>
-                      </div>
-                      <p className="text-zinc-400 text-xs">{exp.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl">
-                <h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="arrowRight" className="w-4 h-4 text-pink-400" />Next Steps</h2>
-                <div className="space-y-2">
-                  {roastResult.next_steps.map((step, i) => (
-                    <label key={i} className="flex items-center gap-2 cursor-pointer group">
-                      <input type="checkbox" className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-pink-500" />
-                      <span className="text-zinc-300 text-sm group-hover:text-white">{step}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+      if (view === 'results' && result) return (
+        <div className="min-h-screen bg-zinc-950 text-white p-5 overflow-auto">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6"><div className="flex items-center gap-2"><Icon name="flame" className="w-7 h-7 text-pink-500" /><span className="text-lg font-bold">AdRoast</span></div><button onClick={reset} className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-red-500 rounded-lg text-xs font-medium"><Icon name="rotateCcw" className="w-3 h-3" />New Roast</button></div>
+            <div className="mb-4 p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg"><p className="text-xs text-zinc-500"><span className="text-zinc-400">ICP:</span> {icp.slice(0, 100)}</p></div>
+            <div className="p-5 bg-gradient-to-r from-pink-500/10 to-red-500/10 border border-pink-500/30 rounded-2xl mb-6">
+              <div className="flex items-start justify-between"><div><div className="flex gap-2 mb-3"><span className="px-2 py-0.5 bg-zinc-800 rounded text-xs capitalize">{platform}</span><span className="px-2 py-0.5 bg-zinc-800 rounded text-xs capitalize">{offerType}</span></div><h1 className="text-xl font-bold mb-2">The Verdict</h1><p className="text-pink-400 font-medium">"{result.icp_mismatch}"</p></div><div className="text-center"><div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold ${getScoreColor(result.overall_score)}`}>{result.overall_score}</div><span className="text-xs text-zinc-400">/10</span></div></div>
             </div>
+            <div className="mb-6"><h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="alertCircle" className="w-4 h-4 text-pink-400" />5 Critical Issues</h2><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{result.issues.map((issue, i) => (<div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl"><div className="flex items-start justify-between mb-2"><span className="font-medium text-xs">{issue.title}</span><span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(issue.score)}`}>{issue.score}</span></div><p className="text-zinc-400 text-xs">{issue.explanation}</p></div>))}</div></div>
+            <div className="mb-6"><h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="zap" className="w-4 h-4 text-pink-400" />Fix Kit</h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl"><h3 className="font-medium text-xs text-zinc-400 uppercase mb-3">Headlines</h3><div className="space-y-2">{result.fix_kit.headlines.map((h, i) => (<div key={i} className="flex items-center justify-between p-2 bg-zinc-800/50 rounded-lg group"><span className="text-sm">{h}</span><button onClick={() => copy(h, `h-${i}`)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-zinc-700 rounded"><Icon name={copied[`h-${i}`] ? 'check' : 'copy'} className={`w-3 h-3 ${copied[`h-${i}`] ? 'text-green-400' : ''}`} /></button></div>))}</div></div>
+                <div className="space-y-3">
+                  <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl"><div className="flex items-center justify-between mb-2"><h3 className="font-medium text-xs text-zinc-400 uppercase">Body</h3><button onClick={() => copy(result.fix_kit.body, 'body')} className="p-1.5 hover:bg-zinc-800 rounded"><Icon name={copied.body ? 'check' : 'copy'} className={`w-3 h-3 ${copied.body ? 'text-green-400' : ''}`} /></button></div><p className="text-sm text-zinc-300">{result.fix_kit.body}</p></div>
+                  <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl"><h3 className="font-medium text-xs text-zinc-400 uppercase mb-2">CTAs</h3><div className="flex flex-wrap gap-2">{result.fix_kit.ctas.map((cta, i) => (<button key={i} onClick={() => copy(cta, `cta-${i}`)} className="px-3 py-1.5 bg-pink-500/20 text-pink-400 rounded-lg text-sm font-medium hover:bg-pink-500/30 flex items-center gap-1.5">{cta}<Icon name={copied[`cta-${i}`] ? 'check' : 'copy'} className="w-3 h-3" /></button>))}</div></div>
+                </div>
+              </div>
+              <div className="mt-3 p-3 bg-zinc-800/30 rounded-lg"><p className="text-xs text-zinc-400"><span className="text-pink-400 font-medium">Why:</span> {result.fix_kit.rationale}</p></div>
+            </div>
+            <div className="mb-6"><h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="sparkles" className="w-4 h-4 text-pink-400" />3 Experiments</h2><div className="grid sm:grid-cols-3 gap-3">{result.experiments.map((exp, i) => (<div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl"><div className="flex items-center gap-2 mb-2"><div className="w-5 h-5 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">{i + 1}</div><h3 className="font-medium text-sm">{exp.title}</h3></div><p className="text-zinc-400 text-xs">{exp.description}</p></div>))}</div></div>
+            <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl"><h2 className="font-bold mb-3 flex items-center gap-2 text-sm"><Icon name="arrowRight" className="w-4 h-4 text-pink-400" />Next Steps</h2><div className="space-y-2">{result.next_steps.map((step, i) => (<label key={i} className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-pink-500" /><span className="text-zinc-300 text-sm group-hover:text-white">{step}</span></label>))}</div></div>
           </div>
-        );
-      }
+        </div>
+      );
 
       return null;
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<AdRoastApp />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
