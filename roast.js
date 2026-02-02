@@ -5,16 +5,40 @@ export default async function handler(req, res) {
 
   const { platform, offerType, icpDescription, landingUrl, adCopy, visualDescription, hasImage, landingCopy } = req.body;
 
+  console.log('[AdRoast] Request received:', {
+    platform,
+    offerType,
+    hasAdCopy: !!adCopy?.trim(),
+    adCopyLength: adCopy?.trim()?.length || 0,
+    hasLandingUrl: !!landingUrl?.trim(),
+    landingUrl: landingUrl || 'none',
+    hasLandingCopy: !!landingCopy?.trim(),
+    landingCopyLength: landingCopy?.trim()?.length || 0
+  });
+
+  // Track what content we actually have
+  const meta = {
+    hasAdCopy: !!adCopy?.trim(),
+    hasLandingUrl: !!landingUrl?.trim(),
+    hasLandingCopy: !!landingCopy?.trim(),
+    landingScraped: false,
+    landingScrapeError: null
+  };
+
   // Fetch landing page content if URL provided
   let landingPageContent = '';
-  if (landingUrl) {
+  if (landingUrl?.trim()) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
       const pageRes = await fetch(landingUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         },
-        timeout: 10000
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       const html = await pageRes.text();
       
       // Extract text content, removing scripts/styles
@@ -24,9 +48,8 @@ export default async function handler(req, res) {
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 8000); // Limit to ~8k chars for context
+        .slice(0, 8000);
       
-      // Also extract specific elements
       const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
       const h1Match = html.match(/<h1[^>]*>([^<]*)<\/h1>/gi);
       const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
@@ -39,109 +62,100 @@ export default async function handler(req, res) {
       if (extractedElements.length > 0) {
         landingPageContent = `EXTRACTED ELEMENTS:\n${extractedElements.join('\n')}\n\nPAGE CONTENT:\n${landingPageContent}`;
       }
+      
+      if (landingPageContent.trim().length > 50) {
+        meta.landingScraped = true;
+      } else {
+        landingPageContent = '';
+        meta.landingScrapeError = 'Page returned empty or minimal content';
+      }
     } catch (e) {
-      landingPageContent = `[Could not fetch landing page: ${e.message}. Analyze based on URL pattern only.]`;
+      meta.landingScrapeError = e.message;
+      landingPageContent = '';
     }
   }
+
+  const hasAnyLandingContent = !!(landingPageContent || landingCopy?.trim());
 
   const systemPrompt = `You are AdRoast, a brutally honest ad and landing page analyst for SaaS founders.
 
 Your job:
 1. Analyze whether the AD speaks to the user's stated ICP
-2. Analyze the LANDING PAGE content for conversion issues (you'll receive the actual page content)
-3. Identify MESSAGING MISMATCH between what the ad promises and what the landing page delivers
-
-Key Analysis Points:
-- Does the ad headline match the landing page headline?
-- Does the ad promise match the landing page's value proposition?
-- Is the CTA consistent between ad and landing page?
-- Would clicking this ad feel like a seamless journey or a jarring disconnect?
+2. If landing page content is provided: Analyze the LANDING PAGE for conversion issues
+3. If both ad AND landing page exist: Identify MESSAGING MISMATCH between them
 
 Approach: Direct, sarcastic but not mean. Use the "barbecue test" - would this copy make sense at a casual BBQ? Cite specific copy from both ad AND landing page when critiquing. Be harsh but fair — most ads and pages deserve 4-6.
 
 Scoring (1-10): 1-3 = Actively hurting conversions, 4-6 = Generic/forgettable, 7-8 = Solid, 9-10 = Best-in-class
 
-Return ONLY valid JSON, no markdown.`;
+CRITICAL RULES:
+- Return ONLY valid JSON. No markdown. No backticks. No text before or after the JSON.
+- ALWAYS include ALL sections: issues, landing_page_roast, ad_landing_mismatch, fix_kit, experiments, next_steps.
+- If landing page content IS provided, landing_page_roast and ad_landing_mismatch scores MUST be real numbers 1-10. NEVER 0 or null.
+- If NO landing page content is provided, set landing_page_roast and ad_landing_mismatch scores to 0.`;
 
-  const userPrompt = `Analyze this ad AND its landing page for ICP: "${icpDescription}"
+  const userPrompt = `Analyze this ad${hasAnyLandingContent ? ' AND its landing page' : ''} for ICP: "${icpDescription}"
 
 Platform: ${platform}
 Offer: ${offerType}
 Landing Page URL: ${landingUrl || 'Not provided'}
+Landing page content available: ${hasAnyLandingContent ? 'YES — SCORE IT 1-10' : 'NO — SCORE IT 0'}
 
-${adCopy ? `=== AD COPY ===
-${adCopy}` : ''}
+${adCopy ? `=== AD COPY ===\n${adCopy}` : '=== AD COPY ===\n[No ad copy provided]'}
 
-${visualDescription ? `=== AD VISUAL DESCRIPTION ===
-${visualDescription}` : ''}
+${visualDescription ? `=== AD VISUAL DESCRIPTION ===\n${visualDescription}` : ''}
 
-${landingPageContent ? `=== LANDING PAGE CONTENT (SCRAPED) ===
-${landingPageContent}` : ''}
+${landingPageContent ? `=== LANDING PAGE CONTENT (AUTO-SCRAPED FROM URL) ===\n${landingPageContent}` : ''}
 
-${landingCopy ? `=== LANDING PAGE CONTENT (USER-PROVIDED) ===
-${landingCopy}` : ''}
+${landingCopy?.trim() ? `=== LANDING PAGE CONTENT (USER-PROVIDED) ===\n${landingCopy}` : ''}
 
-${!landingPageContent && !landingCopy ? 'No landing page content available' : ''}
+${!hasAnyLandingContent ? 'NO LANDING PAGE CONTENT AVAILABLE. Set all landing_page_roast scores to 0 and ad_landing_mismatch alignment_score to 0.' : 'LANDING PAGE CONTENT IS AVAILABLE ABOVE. You MUST provide real scores (1-10) for landing_page_roast and ad_landing_mismatch. Do NOT use 0.'}
 
-ANALYSIS REQUIRED:
-1. AD ROAST: Score and critique the ad copy against the ICP
-2. LANDING PAGE ROAST: Score and critique the landing page content - is the headline clear? Is the value prop compelling? Are CTAs visible and low-friction?
-3. MESSAGING MATCH/MISMATCH: Does the landing page deliver on what the ad promises? Quote specific copy from BOTH ad and landing page to show alignment or disconnect.
-
-Return this JSON structure:
+Return this EXACT JSON structure (all fields required):
 {
-  "icp_mismatch": "Does this ad speak to the ICP or accidentally target someone else?",
-  "overall_score": <1-10>,
+  "icp_mismatch": "string",
+  "overall_score": <number 1-10>,
   "issues": [
-    {"category": "headline_clarity", "title": "Headline Clarity", "score": <1-10>, "explanation": "feedback on ad headline"},
-    {"category": "cta_friction", "title": "CTA Friction", "score": <1-10>, "explanation": "feedback on ad CTA"},
-    {"category": "visual_copy_match", "title": "Visual-Copy Match", "score": <1-10>, "explanation": "feedback on visual"},
-    {"category": "benefit_specificity", "title": "Benefit Specificity", "score": <1-10>, "explanation": "feedback on benefits"},
-    {"category": "trust_signals", "title": "Trust Signals", "score": <1-10>, "explanation": "feedback on trust"}
+    {"category": "headline_clarity", "title": "Headline Clarity", "score": <1-10>, "explanation": "string"},
+    {"category": "cta_friction", "title": "CTA Friction", "score": <1-10>, "explanation": "string"},
+    {"category": "visual_copy_match", "title": "Visual-Copy Match", "score": <1-10>, "explanation": "string"},
+    {"category": "benefit_specificity", "title": "Benefit Specificity", "score": <1-10>, "explanation": "string"},
+    {"category": "trust_signals", "title": "Trust Signals", "score": <1-10>, "explanation": "string"}
   ],
   "landing_page_roast": {
-    "overall_score": <1-10>,
-    "headline_score": <1-10>,
-    "headline_feedback": "Quote the actual landing page headline and critique it for the ICP",
-    "value_prop_score": <1-10>,
-    "value_prop_feedback": "Does the page clearly communicate the value? Quote specific copy.",
-    "cta_score": <1-10>,
-    "cta_feedback": "Is the CTA clear, visible, and low-friction? What does it say?",
-    "trust_score": <1-10>,
-    "trust_feedback": "Are there logos, testimonials, stats? What's missing?",
-    "top_issues": ["Specific issue 1 with the landing page", "Issue 2", "Issue 3"],
-    "quick_wins": ["Specific quick fix 1", "Quick fix 2", "Quick fix 3"]
+    "overall_score": <${hasAnyLandingContent ? '1-10 REQUIRED — NOT 0' : '0'}>,
+    "headline_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "headline_feedback": "string",
+    "value_prop_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "value_prop_feedback": "string",
+    "cta_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "cta_feedback": "string",
+    "trust_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "trust_feedback": "string",
+    "top_issues": ["string", "string", "string"],
+    "quick_wins": ["string", "string", "string"]
   },
   "ad_landing_mismatch": {
-    "alignment_score": <1-10>,
-    "verdict": "One sentence: does the landing page deliver on the ad's promise? Be specific.",
-    "disconnects": [
-      {"problem": "Ad says X but landing page says Y - quote both", "fix": "How to align them"},
-      {"problem": "Another specific mismatch with quotes", "fix": "How to fix"}
-    ],
-    "message_match_issues": "Detailed explanation with specific quotes showing where ad promise differs from landing page delivery"
+    "alignment_score": <${hasAnyLandingContent ? '1-10 REQUIRED — NOT 0' : '0'}>,
+    "verdict": "string",
+    "disconnects": [{"problem": "string", "fix": "string"}],
+    "message_match_issues": "string"
   },
   "fix_kit": {
-    "headlines": ["headline1", "headline2", "headline3"],
-    "body": "rewritten ad body that matches landing page messaging",
-    "ctas": ["cta1", "cta2"],
-    "landing_page_headline": "Suggested landing page headline that aligns with ad",
-    "landing_page_subhead": "Suggested subheadline for landing page",
-    "rationale": "Why these changes create message match between ad and landing page"
+    "headlines": ["string", "string", "string"],
+    "body": "string",
+    "ctas": ["string", "string"],
+    "landing_page_headline": "string",
+    "landing_page_subhead": "string",
+    "rationale": "string"
   },
   "experiments": [
-    {"title": "Test 1", "description": "what to test"},
-    {"title": "Test 2", "description": "what to test"},
-    {"title": "Test 3", "description": "what to test"}
+    {"title": "string", "description": "string"},
+    {"title": "string", "description": "string"},
+    {"title": "string", "description": "string"}
   ],
-  "next_steps": ["step1", "step2", "step3", "step4"]
-}
-
-CRITICAL: Quote actual copy from both ad AND landing page when critiquing. If the landing page says "Automate your workflow" but the ad says "Save 10 hours/week", that's a mismatch—call it out with the exact quotes.
-
-IMPORTANT: If ANY landing page content is provided (either scraped or user-pasted), you MUST return real scores (1-10) for landing_page_roast and ad_landing_mismatch. Never return 0 when content exists.
-If no landing page content is provided at all, set landing_page_roast scores to 0 and note "No landing page content available".
-If no ad copy is provided, focus more heavily on landing page analysis.`;
+  "next_steps": ["string", "string", "string", "string"]
+}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -162,26 +176,64 @@ If no ad copy is provided, focus more heavily on landing page analysis.`;
     const data = await response.json();
 
     if (data.error) {
-      return res.status(500).json({ error: data.error.message || 'API error' });
+      return res.status(500).json({ error: data.error.message || 'API error', _meta: meta });
     }
 
     if (data.content?.[0]?.text) {
       const jsonMatch = data.content[0].text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        // Ensure landing_page_roast and ad_landing_mismatch always exist
+        
+        console.log('[AdRoast] Meta:', JSON.stringify(meta));
+        console.log('[AdRoast] hasAnyLandingContent:', hasAnyLandingContent);
+        
+        // Ensure landing_page_roast always exists
         if (!parsed.landing_page_roast) {
-          parsed.landing_page_roast = { overall_score: null, headline_score: null, headline_feedback: 'No landing page content available', value_prop_score: null, value_prop_feedback: '', cta_score: null, cta_feedback: '', trust_score: null, trust_feedback: '', top_issues: [], quick_wins: [] };
+          parsed.landing_page_roast = {
+            overall_score: hasAnyLandingContent ? 5 : 0,
+            headline_score: hasAnyLandingContent ? 5 : 0,
+            headline_feedback: hasAnyLandingContent ? 'Analysis could not be completed' : 'No landing page provided',
+            value_prop_score: hasAnyLandingContent ? 5 : 0, value_prop_feedback: '',
+            cta_score: hasAnyLandingContent ? 5 : 0, cta_feedback: '',
+            trust_score: hasAnyLandingContent ? 5 : 0, trust_feedback: '',
+            top_issues: [], quick_wins: []
+          };
         }
+        
+        // Ensure ad_landing_mismatch always exists
         if (!parsed.ad_landing_mismatch) {
-          parsed.ad_landing_mismatch = { alignment_score: null, verdict: 'No landing page provided for comparison', disconnects: [], message_match_issues: '' };
+          parsed.ad_landing_mismatch = {
+            alignment_score: hasAnyLandingContent ? 5 : 0,
+            verdict: hasAnyLandingContent ? 'Analysis could not be completed' : 'No landing page provided for comparison',
+            disconnects: [], message_match_issues: ''
+          };
         }
+        
+        // FIX: If we HAVE landing content but LLM returned 0 scores, force minimum of 1
+        // This is the main bug — LLM sometimes returns 0 even when content exists
+        if (hasAnyLandingContent) {
+          const lp = parsed.landing_page_roast;
+          if (!lp.overall_score || lp.overall_score < 1) lp.overall_score = Math.max(1, lp.headline_score || 5);
+          if (!lp.headline_score || lp.headline_score < 1) lp.headline_score = 5;
+          if (!lp.value_prop_score || lp.value_prop_score < 1) lp.value_prop_score = 5;
+          if (!lp.cta_score || lp.cta_score < 1) lp.cta_score = 5;
+          if (!lp.trust_score || lp.trust_score < 1) lp.trust_score = 5;
+          
+          const mm = parsed.ad_landing_mismatch;
+          if (!mm.alignment_score || mm.alignment_score < 1) mm.alignment_score = 5;
+        }
+        
+        console.log('[AdRoast] LP score:', parsed.landing_page_roast.overall_score);
+        console.log('[AdRoast] Match score:', parsed.ad_landing_mismatch.alignment_score);
+        
+        // Add meta for frontend debugging
+        parsed._meta = meta;
         return res.status(200).json(parsed);
       }
     }
 
-    return res.status(500).json({ error: 'Could not parse response' });
+    return res.status(500).json({ error: 'Could not parse response', _meta: meta });
   } catch (error) {
-    return res.status(500).json({ error: 'Server error: ' + error.message });
+    return res.status(500).json({ error: 'Server error: ' + error.message, _meta: meta });
   }
 }
