@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     body { font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -50,6 +50,17 @@
     };
 
     const EMAIL_CONFIG = { service_id: 'service_ywioabe', template_id: 'template_gtqow85', public_key: '964Wa83HevoEa5KnS', notify_email: 'marina.kogan@brandswithpurpose.us' };
+
+    /* ─── LEAD LOGGING ─── */
+    const logLead = async (data) => {
+      try {
+        await fetch('/api/lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      } catch (e) { console.error('Lead log error:', e); }
+    };
 
     const validateLinkedIn = (url) => {
       if (!url) return { valid: false, error: 'LinkedIn URL is required' };
@@ -113,62 +124,29 @@
 
       const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-      const buildPDF = () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-        const pw = 170, lm = 20;
-        let y = 20;
-        const addPage = () => { doc.addPage(); y = 20; };
-        const checkSpace = (need) => { if (y + need > 275) addPage(); };
-        const addTitle = (text) => { checkSpace(12); doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.setTextColor(10,102,194); doc.text(text, lm, y); y += 8; doc.setDrawColor(10,102,194); doc.line(lm, y, lm+pw, y); y += 6; };
-        const addSubtitle = (text) => { checkSpace(10); doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(50,50,50); doc.text(text, lm, y); y += 6; };
-        const addBody = (text) => { if (!text) return; doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80); const lines = doc.splitTextToSize(String(text), pw); checkSpace(lines.length*4.5); doc.text(lines, lm, y); y += lines.length*4.5+2; };
-        const addScore = (label, score) => { checkSpace(7); doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(50,50,50); doc.text(label+':', lm, y); const c = score<=3?[220,38,38]:score<=6?[217,119,6]:[22,163,74]; doc.setTextColor(...c); doc.text(score+'/10', lm+45, y); y += 6; };
-        const addBullet = (text) => { if (!text) return; doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80); const lines = doc.splitTextToSize(String(text), pw-6); checkSpace(lines.length*4.5); doc.text('\u2022', lm, y); doc.text(lines, lm+5, y); y += lines.length*4.5+1; };
-        const r = result; const lp = r.landing_page_roast||{}; const mm = r.ad_landing_mismatch||{};
-        doc.setFillColor(10,102,194); doc.rect(0,0,210,32,'F');
-        doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-        doc.text('AdRoast Report', lm, 15);
-        doc.setFontSize(10); doc.setFont('helvetica','normal');
-        doc.text(new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}), lm, 23);
-        doc.text('Platform: '+platform+' | Offer: '+offerType, lm, 28); y = 40;
-        doc.setFontSize(9.5); doc.setFont('helvetica','bold'); doc.setTextColor(10,102,194);
-        doc.text('TARGET AUDIENCE', lm, y); y += 5; addBody(icp); y += 3;
-        addTitle('Scores');
-        addScore('Ad Score', r.overall_score);
-        if (lp.overall_score > 0) addScore('Landing Page', lp.overall_score);
-        if (mm.alignment_score > 0) addScore('Ad\u2194LP Match', mm.alignment_score);
-        y += 2; addBody(r.icp_mismatch); y += 3;
-        addTitle('Ad Issues');
-        (r.issues||[]).forEach(issue => { addSubtitle(issue.title+' \u2014 '+issue.score+'/10'); addBody(issue.explanation); });
-        if (mm.disconnects && mm.disconnects.length > 0) {
-          addTitle('Message Mismatch'); addBody(mm.verdict);
-          if (mm.message_match_issues) addBody(mm.message_match_issues);
-          mm.disconnects.forEach(d => { addBullet('Problem: '+d.problem); addBullet('Fix: '+d.fix); y += 2; });
-        }
-        if (lp.overall_score > 0) {
-          addTitle('Landing Page Analysis');
-          [{l:'Headline',s:lp.headline_score,f:lp.headline_feedback},{l:'Value Prop',s:lp.value_prop_score,f:lp.value_prop_feedback},{l:'CTA',s:lp.cta_score,f:lp.cta_feedback},{l:'Trust',s:lp.trust_score,f:lp.trust_feedback}].forEach(item => { addSubtitle(item.l+' \u2014 '+item.s+'/10'); addBody(item.f); });
-          if (lp.top_issues?.length > 0) { addSubtitle('Top Issues'); lp.top_issues.forEach(i => addBullet(i)); }
-          if (lp.quick_wins?.length > 0) { addSubtitle('Quick Wins'); lp.quick_wins.forEach(w => addBullet(w)); }
-        }
-        addTitle('Fix Kit'); addSubtitle('Headlines');
-        (r.fix_kit.headlines||[]).forEach((h,i) => addBullet((i+1)+'. '+h));
-        addSubtitle('Body'); addBody(r.fix_kit.body);
-        addSubtitle('CTAs'); (r.fix_kit.ctas||[]).forEach(c => addBullet(c));
-        if (r.fix_kit.landing_page_headline) { addSubtitle('Landing Page Headline'); addBody(r.fix_kit.landing_page_headline); }
-        if (r.fix_kit.landing_page_subhead) { addSubtitle('Landing Page Subheadline'); addBody(r.fix_kit.landing_page_subhead); }
-        addSubtitle('Why This Works'); addBody(r.fix_kit.rationale);
-        addTitle('Experiments to Run');
-        (r.experiments||[]).forEach((exp,i) => { addSubtitle((i+1)+'. '+exp.title); addBody(exp.description); });
-        addTitle('Next Steps');
-        (r.next_steps||[]).forEach((step,i) => addBullet((i+1)+'. '+step));
-        checkSpace(20); y += 5;
-        doc.setDrawColor(10,102,194); doc.line(lm, y, lm+pw, y); y += 6;
-        doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(120,120,120);
-        doc.text('Generated by AdRoast \u2014 Brutally honest ad feedback for AI founders', lm, y); y += 4;
-        doc.text('linkedin.com/in/koganmarinamkt', lm, y);
-        return doc;
+      const buildPDF = async () => {
+        const el = document.getElementById('results-for-pdf');
+        if (!el) return;
+        // Hide the report form section during capture
+        const hideEls = el.querySelectorAll('[data-pdf-hide]');
+        hideEls.forEach(h => h.style.display = 'none');
+        // Add footer to PDF
+        const footer = document.createElement('div');
+        footer.style.cssText = 'text-align:center;padding:12px 0 4px;color:#999;font-size:12px;border-top:1px solid #ddd;margin-top:16px;';
+        footer.textContent = 'Generated by AdRoast \u2014 linkedin.com/in/koganmarinamkt';
+        el.appendChild(footer);
+        const opt = {
+          margin: [8, 6, 8, 6],
+          filename: 'AdRoast-Report.pdf',
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, scrollY: 0, windowWidth: 900 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        await html2pdf().set(opt).from(el).save();
+        // Restore hidden elements
+        hideEls.forEach(h => h.style.display = '');
+        el.removeChild(footer);
       };
 
       const collectReportEmail = async (action) => {
@@ -183,8 +161,14 @@
             })
           });
         } catch (e) { console.error('Email error:', e); }
-        const doc = buildPDF();
-        doc.save('AdRoast-Report.pdf');
+        logLead({
+          linkedin, email: reportEmail, platform, offer: offerType, icp, landingUrl: inputs.url,
+          adScore: result.overall_score,
+          lpScore: result.landing_page_roast?.overall_score || 'N/A',
+          matchScore: result.ad_landing_mismatch?.alignment_score || 'N/A',
+          source: 'pdf_' + action
+        });
+        await buildPDF();
         setPdfStatus(action === 'download' ? 'downloaded' : 'emailed');
       };
 
@@ -206,6 +190,13 @@
           ctas: result.fix_kit.ctas,
           lpHeadline: result.fix_kit.landing_page_headline || 'N/A',
           lpSubhead: result.fix_kit.landing_page_subhead || 'N/A'
+        });
+        logLead({
+          linkedin, platform, offer: offerType, icp, landingUrl: inputs.url,
+          adScore: result.overall_score,
+          lpScore: result.landing_page_roast?.overall_score || 'N/A',
+          matchScore: result.ad_landing_mismatch?.alignment_score || 'N/A',
+          source: 'linkedin_gate'
         });
         setSending(false); setView('results');
       };
@@ -397,11 +388,11 @@
         const lp = result.landing_page_roast || {};
         const mismatch = result.ad_landing_mismatch || {};
         return (
-          <div className="min-h-screen bg-gray-100">
+          <div id="results-for-pdf" className="min-h-screen bg-gray-100">
             <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
               <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2"><Icon name="linkedin" className="w-9 h-9" /><span className="text-gray-300 text-lg font-light">|</span><span className="text-xl text-gray-800 font-semibold">AdRoast</span></div>
-                <button onClick={reset} style={{ borderColor: '#0a66c2', color: '#0a66c2' }} className="flex items-center gap-2 px-4 py-1.5 bg-white border-2 rounded-full text-sm font-semibold hover:bg-blue-50 transition-colors"><Icon name="rotateCcw" className="w-4 h-4" /> New Analysis</button>
+                <button data-pdf-hide="true" onClick={reset} style={{ borderColor: '#0a66c2', color: '#0a66c2' }} className="flex items-center gap-2 px-4 py-1.5 bg-white border-2 rounded-full text-sm font-semibold hover:bg-blue-50 transition-colors"><Icon name="rotateCcw" className="w-4 h-4" /> New Analysis</button>
               </div>
             </header>
             <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
@@ -555,7 +546,7 @@
               </div>
 
               {/* Get Report */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div data-pdf-hide="true" className="bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className="px-4 py-3 border-b border-gray-200"><h2 className="font-semibold text-gray-900 flex items-center gap-2"><Icon name="fileText" className="w-5 h-5" style={{ color: '#0a66c2' }} /> Get Your Report</h2></div>
                 <div className="p-4">
                   {pdfStatus === 'downloaded' ? (
