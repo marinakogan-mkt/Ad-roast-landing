@@ -1,6 +1,9 @@
 export default async function handler(req, res) {
+  // Version stamp — if you see this in logs, the new API is deployed
+  const API_VERSION = 'v3';
+  
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed', _version: API_VERSION });
   }
 
   const { platform, offerType, icpDescription, landingUrl, adCopy, visualDescription, hasImage, landingCopy } = req.body;
@@ -228,6 +231,7 @@ Return this EXACT JSON structure (all fields required):
         
         // Add meta for frontend debugging
         parsed._meta = meta;
+        parsed._version = API_VERSION;
         return res.status(200).json(parsed);
       }
     }
