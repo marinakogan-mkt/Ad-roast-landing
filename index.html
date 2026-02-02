@@ -386,7 +386,6 @@
                   <div className="text-center p-2 bg-gray-50 rounded-lg border border-gray-200"><span className="text-xs text-gray-500 block">Match</span><span className={`text-lg font-bold ${result?.ad_landing_mismatch?.alignment_score > 0 ? getScoreText(result.ad_landing_mismatch.alignment_score) : 'text-gray-400'}`}>{result?.ad_landing_mismatch?.alignment_score > 0 ? `${result.ad_landing_mismatch.alignment_score}/10` : 'N/A'}</span></div>
                 </div>
               </div>
-              </div>
               <button onClick={submitLinkedIn} disabled={!linkedin || sending} style={linkedin && !sending ? { backgroundColor: '#0a66c2', color: 'white' } : {}} className={`w-full py-3 rounded-full font-semibold flex items-center justify-center gap-2 transition-all ${linkedin && !sending ? 'hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>{sending ? 'Unlocking...' : <><Icon name="sparkles" className="w-5 h-5" style={{ color: 'white' }} /> See My Full Roast</>}</button>
             </div>
           </div>
