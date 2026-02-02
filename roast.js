@@ -139,7 +139,8 @@ Return this JSON structure:
 
 CRITICAL: Quote actual copy from both ad AND landing page when critiquing. If the landing page says "Automate your workflow" but the ad says "Save 10 hours/week", that's a mismatch—call it out with the exact quotes.
 
-If no landing page content is provided, set landing_page_roast scores to 0 and note "No landing page content available".
+IMPORTANT: If ANY landing page content is provided (either scraped or user-pasted), you MUST return real scores (1-10) for landing_page_roast and ad_landing_mismatch. Never return 0 when content exists.
+If no landing page content is provided at all, set landing_page_roast scores to 0 and note "No landing page content available".
 If no ad copy is provided, focus more heavily on landing page analysis.`;
 
   try {
@@ -167,7 +168,15 @@ If no ad copy is provided, focus more heavily on landing page analysis.`;
     if (data.content?.[0]?.text) {
       const jsonMatch = data.content[0].text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return res.status(200).json(JSON.parse(jsonMatch[0]));
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Ensure landing_page_roast and ad_landing_mismatch always exist
+        if (!parsed.landing_page_roast) {
+          parsed.landing_page_roast = { overall_score: null, headline_score: null, headline_feedback: 'No landing page content available', value_prop_score: null, value_prop_feedback: '', cta_score: null, cta_feedback: '', trust_score: null, trust_feedback: '', top_issues: [], quick_wins: [] };
+        }
+        if (!parsed.ad_landing_mismatch) {
+          parsed.ad_landing_mismatch = { alignment_score: null, verdict: 'No landing page provided for comparison', disconnects: [], message_match_issues: '' };
+        }
+        return res.status(200).json(parsed);
       }
     }
 
