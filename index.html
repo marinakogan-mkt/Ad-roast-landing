@@ -298,9 +298,11 @@
                 <p className="text-gray-500 text-xs mb-3">Preview:</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="text-center p-2 bg-gray-50 rounded-lg border border-gray-200"><span className="text-xs text-gray-500 block">Ad</span><span className={`text-lg font-bold ${getScoreText(result?.overall_score)}`}>{result?.overall_score}/10</span></div>
-                  <div className="text-center p-2 bg-gray-50 rounded-lg border border-gray-200"><span className="text-xs text-gray-500 block">Landing</span><span className={`text-lg font-bold ${getScoreText(result?.landing_page_roast?.overall_score ?? 0)}`}>{result?.landing_page_roast?.overall_score ?? '—'}/10</span></div>
-                  <div className="text-center p-2 bg-gray-50 rounded-lg border border-gray-200"><span className="text-xs text-gray-500 block">Match</span><span className={`text-lg font-bold ${getScoreText(result?.ad_landing_mismatch?.alignment_score ?? 0)}`}>{result?.ad_landing_mismatch?.alignment_score ?? '—'}/10</span></div>
+                  <div className="text-center p-2 bg-gray-50 rounded-lg border border-gray-200"><span className="text-xs text-gray-500 block">Landing</span><span className={`text-lg font-bold ${result?.landing_page_roast?.overall_score > 0 ? getScoreText(result.landing_page_roast.overall_score) : 'text-gray-400'}`}>{result?.landing_page_roast?.overall_score > 0 ? `${result.landing_page_roast.overall_score}/10` : 'N/A'}</span></div>
+                  <div className="text-center p-2 bg-gray-50 rounded-lg border border-gray-200"><span className="text-xs text-gray-500 block">Match</span><span className={`text-lg font-bold ${result?.ad_landing_mismatch?.alignment_score > 0 ? getScoreText(result.ad_landing_mismatch.alignment_score) : 'text-gray-400'}`}>{result?.ad_landing_mismatch?.alignment_score > 0 ? `${result.ad_landing_mismatch.alignment_score}/10` : 'N/A'}</span></div>
                 </div>
+                {result?._meta?.landingScrapeError && <p className="text-amber-600 text-xs mt-2">⚠️ Couldn't scrape URL: {result._meta.landingScrapeError}. Paste landing page copy for best results.</p>}
+                {!result?._meta?.hasLandingCopy && !result?._meta?.landingScraped && <p className="text-gray-400 text-xs mt-2">No landing page content provided. Paste your LP copy next time for full analysis.</p>}
               </div>
               <button onClick={submitLinkedIn} disabled={!linkedin || sending} style={linkedin && !sending ? { backgroundColor: '#0a66c2', color: 'white' } : {}} className={`w-full py-3 rounded-full font-semibold flex items-center justify-center gap-2 transition-all ${linkedin && !sending ? 'hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>{sending ? 'Unlocking...' : <><Icon name="sparkles" className="w-5 h-5" style={{ color: 'white' }} /> See My Full Roast</>}</button>
             </div>
@@ -331,11 +333,11 @@
                   <p className="text-sm text-gray-700">{result.icp_mismatch}</p>
                 </div>
                 <div className={`bg-white rounded-lg border ${getScoreBorder(lp.overall_score || 0)} shadow-sm p-4`}>
-                  <div className="flex items-center justify-between mb-2"><span className="text-sm font-semibold text-gray-500">Landing Page</span><span className={`text-2xl font-bold ${getScoreText(lp.overall_score ?? 0)}`}>{lp.overall_score ?? '—'}/10</span></div>
+                  <div className="flex items-center justify-between mb-2"><span className="text-sm font-semibold text-gray-500">Landing Page</span><span className={`text-2xl font-bold ${lp.overall_score > 0 ? getScoreText(lp.overall_score) : 'text-gray-400'}`}>{lp.overall_score > 0 ? `${lp.overall_score}/10` : 'N/A'}</span></div>
                   <p className="text-sm text-gray-700">{lp.headline_feedback || 'No landing page provided'}</p>
                 </div>
                 <div className={`bg-white rounded-lg border ${getScoreBorder(mismatch.alignment_score || 0)} shadow-sm p-4`}>
-                  <div className="flex items-center justify-between mb-2"><span className="text-sm font-semibold text-gray-500">Ad↔LP Match</span><span className={`text-2xl font-bold ${getScoreText(mismatch.alignment_score ?? 0)}`}>{mismatch.alignment_score ?? '—'}/10</span></div>
+                  <div className="flex items-center justify-between mb-2"><span className="text-sm font-semibold text-gray-500">Ad↔LP Match</span><span className={`text-2xl font-bold ${mismatch.alignment_score > 0 ? getScoreText(mismatch.alignment_score) : 'text-gray-400'}`}>{mismatch.alignment_score > 0 ? `${mismatch.alignment_score}/10` : 'N/A'}</span></div>
                   <p className="text-sm text-gray-700">{mismatch.verdict || 'N/A'}</p>
                 </div>
               </div>
