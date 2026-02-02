@@ -129,13 +129,18 @@
 
       const generate = async () => {
         setError(null); setLoading(true); setView('processing');
+        const payload = { platform, offerType, icpDescription: icp, landingUrl: inputs.url, adCopy: inputs.copy, visualDescription: inputs.visual, landingCopy: inputs.landingCopy };
+        // TEMPORARY DEBUG — remove after fixing
+        alert('DEBUG v3: Sending to API:\n\nAd copy: ' + (payload.adCopy?.length || 0) + ' chars\nLanding URL: ' + (payload.landingUrl || 'none') + '\nLanding copy: ' + (payload.landingCopy?.length || 0) + ' chars\n\nFirst 100 chars of landing copy:\n' + (payload.landingCopy?.slice(0, 100) || '[EMPTY]'));
         try {
           const res = await fetch('/api/roast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ platform, offerType, icpDescription: icp, landingUrl: inputs.url, adCopy: inputs.copy, visualDescription: inputs.visual, landingCopy: inputs.landingCopy })
+            body: JSON.stringify(payload)
           });
           const data = await res.json();
+          console.log('[AdRoast v3] Response _meta:', JSON.stringify(data._meta));
+          console.log('[AdRoast v3] LP score:', data?.landing_page_roast?.overall_score);
           if (!res.ok) throw new Error(data.error || 'API error');
           setResult(data); setView('linkedin');
         } catch (err) { setError(err.message); setView('input'); }
@@ -247,6 +252,7 @@
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-1">Landing Page Copy <span style={{ color: '#0a66c2' }}>(paste to compare with ad)</span></label>
                   <textarea placeholder="Paste: headline, subheadline, key benefits, CTA text, testimonials..." value={inputs.landingCopy} onChange={(e) => setInputs(p => ({ ...p, landingCopy: e.target.value }))} className="w-full h-28 px-3 py-2 bg-white border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none text-gray-900" />
+                  {inputs.landingCopy.length > 0 && <p className="text-xs text-green-600 mt-1">✓ {inputs.landingCopy.length} characters detected</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-1">Ad Copy</label>
@@ -303,6 +309,7 @@
                 </div>
                 {result?._meta?.landingScrapeError && <p className="text-amber-600 text-xs mt-2">⚠️ Couldn't scrape URL: {result._meta.landingScrapeError}. Paste landing page copy for best results.</p>}
                 {!result?._meta?.hasLandingCopy && !result?._meta?.landingScraped && <p className="text-gray-400 text-xs mt-2">No landing page content provided. Paste your LP copy next time for full analysis.</p>}
+                <details className="mt-2"><summary className="text-xs text-gray-300 cursor-pointer">Debug info</summary><pre className="text-xs text-gray-400 mt-1 whitespace-pre-wrap">{JSON.stringify(result?._meta, null, 2)}</pre></details>
               </div>
               <button onClick={submitLinkedIn} disabled={!linkedin || sending} style={linkedin && !sending ? { backgroundColor: '#0a66c2', color: 'white' } : {}} className={`w-full py-3 rounded-full font-semibold flex items-center justify-center gap-2 transition-all ${linkedin && !sending ? 'hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>{sending ? 'Unlocking...' : <><Icon name="sparkles" className="w-5 h-5" style={{ color: 'white' }} /> See My Full Roast</>}</button>
             </div>
