@@ -1,6 +1,14 @@
 // Notion database: AdRoast Leads
 const NOTION_DATABASE_ID = 'aade7fde-ffe7-42a5-bbf0-8eb56ac506dc';
 
+// Generate short ID (8 chars)
+const generateId = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let id = '';
+  for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,12 +21,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, linkedin, platform, adScore, lpScore, matchScore, reportLink } = req.body;
+    const { email, linkedin, platform, adScore, lpScore, matchScore, roastData, icp } = req.body;
     
-    // Extract LinkedIn username for the title
+    const reportId = generateId();
     const linkedinUsername = linkedin?.split('/in/')?.[1]?.replace(/\/$/, '') || 'Unknown';
+    const reportLink = `https://koganmarina.com/?id=${reportId}`;
     
-    // Map platform to Notion select options
     const platformMap = {
       'meta': 'Meta',
       'linkedin': 'LinkedIn', 
@@ -36,16 +44,16 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         parent: { database_id: NOTION_DATABASE_ID },
         properties: {
-          'Lead': {
-            title: [{ text: { content: linkedinUsername } }]
-          },
+          'Lead': { title: [{ text: { content: linkedinUsername } }] },
+          'Report ID': { rich_text: [{ text: { content: reportId } }] },
+          'Report Link': { url: reportLink },
           'Email': email ? { email: email } : { email: null },
           'LinkedIn': linkedin ? { url: linkedin.startsWith('http') ? linkedin : `https://${linkedin}` } : { url: null },
           'Platform': platform ? { select: { name: platformMap[platform] || 'Meta' } } : { select: null },
           'Ad Score': adScore && adScore !== 'N/A' ? { number: parseFloat(adScore) } : { number: null },
           'LP Score': lpScore && lpScore !== 'N/A' ? { number: parseFloat(lpScore) } : { number: null },
           'Match Score': matchScore && matchScore !== 'N/A' ? { number: parseFloat(matchScore) } : { number: null },
-          'Report Link': reportLink ? { url: reportLink } : { url: null },
+          'Roast Data': roastData ? { rich_text: [{ text: { content: JSON.stringify({ result: roastData, icp, platform }) } }] } : { rich_text: [] },
           'Date': { date: { start: new Date().toISOString().split('T')[0] } }
         }
       })
@@ -57,7 +65,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to save to database' });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, reportId });
   } catch (error) {
     console.error('Lead save error:', error);
     return res.status(500).json({ error: 'Internal server error' });
