@@ -125,246 +125,47 @@
       const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
       const buildPDF = async () => {
-        const r = result;
-        const lp = r.landing_page_roast || {};
-        const mm = r.ad_landing_mismatch || {};
+        const el = document.getElementById('results-for-pdf');
+        if (!el) { console.error('PDF element not found'); alert('Error: Could not find results'); return; }
         
-        const scoreColor = (s) => s <= 3 ? 'red' : s <= 6 ? 'amber' : 'green';
-        const scoreHex = (s) => s <= 3 ? '#dc2626' : s <= 6 ? '#d97706' : '#16a34a';
-        const scoreBorder = (s) => s <= 3 ? '#fca5a5' : s <= 6 ? '#fcd34d' : '#86efac';
-        
-        const styles = `
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-            .container { width: 800px; padding: 20px; background: white; }
-            .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 20px; display: flex; align-items: center; }
-            .brand { font-size: 20px; font-weight: 600; color: #1f2937; margin-left: 8px; }
-            .divider { color: #d1d5db; margin: 0 8px; }
-            .section { margin-bottom: 16px; }
-            .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 16px; }
-            .card-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 600; font-size: 14px; }
-            .card-body { padding: 16px; }
-            .icp-box { background: #e8f3ff; border: 1px solid #b4d4ff; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
-            .scores-grid { display: flex; gap: 16px; margin-bottom: 16px; }
-            .score-card { flex: 1; background: white; border-radius: 8px; padding: 16px; border: 2px solid; }
-            .score-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-            .score-label { font-size: 13px; font-weight: 600; color: #6b7280; }
-            .score-value { font-size: 24px; font-weight: 700; }
-            .score-text { font-size: 13px; color: #4b5563; }
-            .issues-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-            .issue-card { width: calc(50% - 6px); border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
-            .issue-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-            .issue-title { font-size: 13px; font-weight: 500; }
-            .issue-score { font-size: 13px; font-weight: 700; }
-            .issue-text { font-size: 13px; color: #4b5563; }
-            .mismatch-item { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
-            .problem-label { font-weight: 600; color: #b91c1c; }
-            .fix-label { font-weight: 600; color: #15803d; }
-            .tips-grid { display: flex; gap: 12px; }
-            .tips-box { flex: 1; border-radius: 8px; padding: 12px; font-size: 13px; }
-            .tips-warning { background: #fef3c7; border: 1px solid #fcd34d; }
-            .tips-success { background: #d1fae5; border: 1px solid #6ee7b7; }
-            .tips-title { font-weight: 600; margin-bottom: 8px; }
-            .fix-item { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 13px; }
-            .cta-pill { display: inline-block; padding: 8px 16px; border: 2px solid #0a66c2; color: #0a66c2; border-radius: 999px; font-size: 13px; font-weight: 600; margin-right: 8px; margin-bottom: 8px; }
-            .rationale-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; font-size: 13px; }
-            .exp-grid { display: flex; gap: 12px; }
-            .exp-card { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
-            .exp-num { display: inline-block; width: 24px; height: 24px; background: #dbeafe; color: #1d4ed8; border-radius: 999px; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700; margin-right: 8px; }
-            .exp-title { font-size: 13px; font-weight: 500; }
-            .exp-text { font-size: 13px; color: #4b5563; margin-top: 8px; }
-            .step-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; }
-            .step-checkbox { width: 18px; height: 18px; border: 2px solid #d1d5db; border-radius: 4px; flex-shrink: 0; }
-            .step-text { font-size: 13px; color: #4b5563; }
-            .cta-box { background: #e8f3ff; border: 1px solid #b4d4ff; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 16px; }
-            .cta-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-            .cta-subtitle { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
-            .cta-button { display: inline-block; background: #0a66c2; color: white; padding: 10px 24px; border-radius: 999px; font-weight: 600; text-decoration: none; font-size: 14px; }
-            .footer { text-align: center; padding: 16px 0; color: #666; font-size: 13px; border-top: 2px solid #0a66c2; margin-top: 24px; }
-            .footer a { color: #0a66c2; text-decoration: none; font-weight: 600; }
-            .blue { color: #0a66c2; }
-          </style>
-        `;
-        
-        const html = `
-          ${styles}
-          <div class="container">
-            <div class="header">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-              <span class="divider">|</span>
-              <span class="brand">AdRoast</span>
-            </div>
-            
-            <div class="icp-box"><strong>Target Audience:</strong> ${icp}</div>
-            
-            <div class="scores-grid">
-              <div class="score-card" style="border-color:${scoreBorder(r.overall_score)}">
-                <div class="score-header">
-                  <span class="score-label">Ad Score</span>
-                  <span class="score-value" style="color:${scoreHex(r.overall_score)}">${r.overall_score}/10</span>
-                </div>
-                <p class="score-text">${r.icp_mismatch || ''}</p>
-              </div>
-              <div class="score-card" style="border-color:${lp.overall_score ? scoreBorder(lp.overall_score) : '#e5e7eb'}">
-                <div class="score-header">
-                  <span class="score-label">Landing Page</span>
-                  <span class="score-value" style="color:${lp.overall_score ? scoreHex(lp.overall_score) : '#9ca3af'}">${lp.overall_score ? lp.overall_score + '/10' : 'N/A'}</span>
-                </div>
-                <p class="score-text">${lp.headline_feedback || 'No landing page provided'}</p>
-              </div>
-              <div class="score-card" style="border-color:${mm.alignment_score ? scoreBorder(mm.alignment_score) : '#e5e7eb'}">
-                <div class="score-header">
-                  <span class="score-label">Ad↔LP Match</span>
-                  <span class="score-value" style="color:${mm.alignment_score ? scoreHex(mm.alignment_score) : '#9ca3af'}">${mm.alignment_score ? mm.alignment_score + '/10' : 'N/A'}</span>
-                </div>
-                <p class="score-text">${mm.verdict || 'No comparison available'}</p>
-              </div>
-            </div>
-            
-            <div class="card">
-              <div class="card-header">Ad Issues</div>
-              <div class="card-body">
-                <div class="issues-grid">
-                  ${(r.issues || []).map(issue => `
-                    <div class="issue-card">
-                      <div class="issue-header">
-                        <span class="issue-title">${issue.title}</span>
-                        <span class="issue-score" style="color:${scoreHex(issue.score)}">${issue.score}/10</span>
-                      </div>
-                      <p class="issue-text">${issue.explanation}</p>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-            
-            ${mm.disconnects && mm.disconnects.length > 0 ? `
-            <div class="card">
-              <div class="card-header">Message Mismatch</div>
-              <div class="card-body">
-                <p class="score-text" style="margin-bottom:12px">${mm.verdict || ''}</p>
-                ${(mm.disconnects || []).map(d => `
-                  <div class="mismatch-item">
-                    <p><span class="problem-label">⚠ Problem:</span> ${d.problem}</p>
-                    <p style="margin-top:4px"><span class="fix-label">✓ Fix:</span> ${d.fix}</p>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-            ` : ''}
-            
-            ${lp.overall_score ? `
-            <div class="card">
-              <div class="card-header">Landing Page Analysis</div>
-              <div class="card-body">
-                <div class="issues-grid" style="margin-bottom:12px">
-                  <div class="issue-card">
-                    <div class="issue-header"><span class="issue-title">Headline</span><span class="issue-score" style="color:${scoreHex(lp.headline_score)}">${lp.headline_score}/10</span></div>
-                    <p class="issue-text">${lp.headline_feedback}</p>
-                  </div>
-                  <div class="issue-card">
-                    <div class="issue-header"><span class="issue-title">Value Prop</span><span class="issue-score" style="color:${scoreHex(lp.value_prop_score)}">${lp.value_prop_score}/10</span></div>
-                    <p class="issue-text">${lp.value_prop_feedback}</p>
-                  </div>
-                  <div class="issue-card">
-                    <div class="issue-header"><span class="issue-title">CTA</span><span class="issue-score" style="color:${scoreHex(lp.cta_score)}">${lp.cta_score}/10</span></div>
-                    <p class="issue-text">${lp.cta_feedback}</p>
-                  </div>
-                  <div class="issue-card">
-                    <div class="issue-header"><span class="issue-title">Trust</span><span class="issue-score" style="color:${scoreHex(lp.trust_score)}">${lp.trust_score}/10</span></div>
-                    <p class="issue-text">${lp.trust_feedback}</p>
-                  </div>
-                </div>
-                <div class="tips-grid">
-                  ${lp.top_issues?.length ? `<div class="tips-box tips-warning"><p class="tips-title" style="color:#92400e">⚠ Top Issues</p>${lp.top_issues.map(i => '<p>• ' + i + '</p>').join('')}</div>` : ''}
-                  ${lp.quick_wins?.length ? `<div class="tips-box tips-success"><p class="tips-title" style="color:#166534">⚡ Quick Wins</p>${lp.quick_wins.map(w => '<p>• ' + w + '</p>').join('')}</div>` : ''}
-                </div>
-              </div>
-            </div>
-            ` : ''}
-            
-            <div class="card">
-              <div class="card-header">Fix Kit</div>
-              <div class="card-body">
-                <p style="font-weight:600;font-size:13px;margin-bottom:8px">Headlines</p>
-                ${(r.fix_kit.headlines || []).map(h => `<div class="fix-item">${h}</div>`).join('')}
-                
-                <p style="font-weight:600;font-size:13px;margin:16px 0 8px">Body Copy</p>
-                <div class="fix-item">${r.fix_kit.body}</div>
-                
-                <p style="font-weight:600;font-size:13px;margin:16px 0 8px">CTAs</p>
-                <div>${(r.fix_kit.ctas || []).map(c => `<span class="cta-pill">${c}</span>`).join('')}</div>
-                
-                ${r.fix_kit.landing_page_headline ? `
-                <p style="font-weight:600;font-size:13px;margin:16px 0 8px;color:#0a66c2">LANDING PAGE COPY</p>
-                <div style="display:flex;gap:12px">
-                  <div class="fix-item" style="flex:1"><span style="font-size:11px;color:#6b7280">Headline</span><p style="font-weight:500">${r.fix_kit.landing_page_headline}</p></div>
-                  <div class="fix-item" style="flex:1"><span style="font-size:11px;color:#6b7280">Subheadline</span><p>${r.fix_kit.landing_page_subhead || ''}</p></div>
-                </div>
-                ` : ''}
-                
-                <div class="rationale-box" style="margin-top:16px">
-                  <p style="font-weight:600;color:#1e40af;margin-bottom:4px">Why This Works</p>
-                  <p>${r.fix_kit.rationale}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div class="card">
-              <div class="card-header">Experiments to Run</div>
-              <div class="card-body">
-                <div class="exp-grid">
-                  ${(r.experiments || []).map((exp, i) => `
-                    <div class="exp-card">
-                      <p><span class="exp-num">${i + 1}</span><span class="exp-title">${exp.title}</span></p>
-                      <p class="exp-text">${exp.description}</p>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-            
-            <div class="card">
-              <div class="card-header">Next Steps</div>
-              <div class="card-body">
-                ${(r.next_steps || []).map(step => `
-                  <div class="step-item">
-                    <div class="step-checkbox"></div>
-                    <span class="step-text">${step}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-            
-            <div class="cta-box">
-              <p class="cta-title">Want better performing ads?</p>
-              <p class="cta-subtitle">I help AI founders fix their positioning so ads actually convert.</p>
-              <a href="https://www.linkedin.com/in/koganmarinamkt" class="cta-button">Let's connect on LinkedIn</a>
-            </div>
-            
-            <div class="footer">Generated by AdRoast — <a href="https://www.linkedin.com/in/koganmarinamkt">linkedin.com/in/koganmarinamkt</a></div>
-          </div>
-        `;
-        
-        const container = document.createElement('div');
-        container.innerHTML = html;
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        document.body.appendChild(container);
-        
-        const opt = {
-          margin: [10, 10, 10, 10],
-          filename: 'AdRoast-Report.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, width: 800, windowWidth: 800 },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', '.score-card', '.issue-card', '.exp-card', '.mismatch-item'] },
-          enableLinks: true
-        };
-        
-        await html2pdf().set(opt).from(container.firstChild).save();
-        document.body.removeChild(container);
+        try {
+          // Clone the element to avoid modifying the original
+          const clone = el.cloneNode(true);
+          
+          // Remove elements we don't want in PDF
+          clone.querySelectorAll('[data-pdf-hide]').forEach(h => h.remove());
+          
+          // Apply PDF-specific styles
+          clone.style.cssText = 'width:800px;max-width:800px;padding:20px;background:white;';
+          clone.className = '';
+          
+          // Add footer to the clone
+          const footer = document.createElement('div');
+          footer.style.cssText = 'text-align:center;padding:16px 0 8px;color:#666;font-size:13px;border-top:2px solid #0a66c2;margin-top:24px;';
+          footer.innerHTML = 'Generated by AdRoast — <a href="https://www.linkedin.com/in/koganmarinamkt" style="color:#0a66c2;text-decoration:none;font-weight:600;">linkedin.com/in/koganmarinamkt</a>';
+          clone.appendChild(footer);
+          
+          // Create off-screen container
+          const container = document.createElement('div');
+          container.style.cssText = 'position:absolute;left:-9999px;top:0;background:white;';
+          container.appendChild(clone);
+          document.body.appendChild(container);
+          
+          // Generate PDF
+          await html2pdf().set({
+            margin: [8, 8, 8, 8],
+            filename: 'AdRoast-Report.pdf',
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, width: 800, windowWidth: 800 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            enableLinks: true
+          }).from(clone).save();
+          
+          document.body.removeChild(container);
+        } catch (err) {
+          console.error('PDF generation error:', err);
+          alert('PDF generation failed: ' + err.message);
+        }
       };
 
       const collectReportEmail = async (action) => {
