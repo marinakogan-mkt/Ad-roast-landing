@@ -49,7 +49,7 @@
     };
 
     const EMAIL_CONFIG = { service_id: 'service_ywioabe', template_id: 'template_gtqow85', public_key: '964Wa83HevoEa5KnS', notify_email: 'marina.kogan@brandswithpurpose.us' };
-    const PAYMENT_URL = 'https://wise.com/pay/r/mNOE7-UBUvbtPgc';
+    const LINKEDIN_CTA_URL = 'https://www.linkedin.com/messaging/compose/?recipient=koganmarinamkt';
 
     const notifyCtaClick = async (leadLinkedIn, section) => {
       try {
@@ -62,8 +62,8 @@
             user_id: EMAIL_CONFIG.public_key,
             template_params: {
               to_email: EMAIL_CONFIG.notify_email,
-              subject: '💰 AdRoast: Someone clicked to buy Full Report!',
-              message: `A lead clicked "Get Full Report" on the ${section} section.\n\nTheir LinkedIn: ${leadLinkedIn || 'Unknown'}\n\nThey were redirected to Wise payment - check if payment comes through!`
+              subject: '🔓 AdRoast: Someone wants the Full Report!',
+              message: `A lead clicked "Get Full Report" on the ${section} section.\n\nTheir LinkedIn: ${leadLinkedIn || 'Unknown'}\n\nThey were redirected to your LinkedIn DMs - follow up if they don't message!`
             }
           })
         });
@@ -72,7 +72,7 @@
 
     const handleCtaClick = (leadLinkedIn, section) => {
       notifyCtaClick(leadLinkedIn, section);
-      window.open(PAYMENT_URL, '_blank');
+      window.open(LINKEDIN_CTA_URL, '_blank');
     };
 
     const saveToNotion = async (data) => {
@@ -699,6 +699,15 @@
                   </div>
                 </div>
               )}
+
+              {/* CTA */}
+              <div style={{ backgroundColor: '#e8f3ff', borderColor: '#b4d4ff' }} className="rounded-lg border p-6 text-center">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Want better performing ads?</h2>
+                <p className="text-gray-600 mb-4">I help AI founders fix their positioning so ads actually convert.</p>
+                <a href="https://www.linkedin.com/in/koganmarinamkt" target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#0a66c2', color: 'white' }} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity">
+                  <Icon name="linkedin" className="w-5 h-5" style={{ fill: 'white' }} /> Let's connect on LinkedIn
+                </a>
+              </div>
             </main>
           </div>
         );
