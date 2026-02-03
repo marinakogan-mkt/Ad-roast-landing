@@ -34,6 +34,41 @@ export default async function handler(req, res) {
       'twitter': 'X/Twitter'
     };
 
+    // Prepare roast data for page content
+    const roastJson = JSON.stringify({ result: roastData, icp, platform });
+    
+    // Split into chunks of 2000 chars for Notion's limit
+    const chunks = [];
+    for (let i = 0; i < roastJson.length; i += 2000) {
+      chunks.push(roastJson.substring(i, i + 2000));
+    }
+
+    const properties = {
+      'Lead': { title: [{ text: { content: linkedinUsername } }] },
+      'Report ID': { rich_text: [{ text: { content: reportId } }] },
+      'Report Link': { url: reportLink },
+      'Date': { date: { start: new Date().toISOString().split('T')[0] } }
+    };
+
+    if (email) properties['Email'] = { email: email };
+    if (linkedin) properties['LinkedIn'] = { url: linkedin.startsWith('http') ? linkedin : `https://${linkedin}` };
+    if (platform && platformMap[platform]) properties['Platform'] = { select: { name: platformMap[platform] } };
+    if (adScore && adScore !== 'N/A') properties['Ad Score'] = { number: parseFloat(adScore) };
+    if (lpScore && lpScore !== 'N/A') properties['LP Score'] = { number: parseFloat(lpScore) };
+    if (matchScore && matchScore !== 'N/A') properties['Match Score'] = { number: parseFloat(matchScore) };
+
+    // Store roast data in page content as code blocks
+    const children = chunks.map(chunk => ({
+      object: 'block',
+      type: 'code',
+      code: {
+        rich_text: [{ type: 'text', text: { content: chunk } }],
+        language: 'json'
+      }
+    }));
+
+    console.log('[Lead API] Saving to Notion:', { reportId, linkedinUsername, chunks: chunks.length });
+
     const response = await fetch('https://api.notion.com/v1/pages', {
       method: 'POST',
       headers: {
@@ -43,31 +78,22 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         parent: { database_id: NOTION_DATABASE_ID },
-        properties: {
-          'Lead': { title: [{ text: { content: linkedinUsername } }] },
-          'Report ID': { rich_text: [{ text: { content: reportId } }] },
-          'Report Link': { url: reportLink },
-          'Email': email ? { email: email } : { email: null },
-          'LinkedIn': linkedin ? { url: linkedin.startsWith('http') ? linkedin : `https://${linkedin}` } : { url: null },
-          'Platform': platform ? { select: { name: platformMap[platform] || 'Meta' } } : { select: null },
-          'Ad Score': adScore && adScore !== 'N/A' ? { number: parseFloat(adScore) } : { number: null },
-          'LP Score': lpScore && lpScore !== 'N/A' ? { number: parseFloat(lpScore) } : { number: null },
-          'Match Score': matchScore && matchScore !== 'N/A' ? { number: parseFloat(matchScore) } : { number: null },
-          'Roast Data': roastData ? { rich_text: [{ text: { content: JSON.stringify({ result: roastData, icp, platform }) } }] } : { rich_text: [] },
-          'Date': { date: { start: new Date().toISOString().split('T')[0] } }
-        }
+        properties: properties,
+        children: children
       })
     });
 
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const error = await response.json();
-      console.error('Notion API error:', error);
-      return res.status(500).json({ error: 'Failed to save to database' });
+      console.error('[Lead API] Notion error:', JSON.stringify(responseData));
+      return res.status(500).json({ error: 'Failed to save', details: responseData });
     }
 
+    console.log('[Lead API] Success:', reportId);
     return res.status(200).json({ success: true, reportId });
   } catch (error) {
-    console.error('Lead save error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('[Lead API] Error:', error.message);
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 }
