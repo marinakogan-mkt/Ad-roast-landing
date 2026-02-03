@@ -1,5 +1,5 @@
 // Notion database: AdRoast Leads
-const NOTION_DATABASE_ID = 'aade7fde-ffe7-42a5-bbf0-8eb56ac506dc';
+const NOTION_DATABASE_ID = '90888e98cd794663acaf9f94ba7bd494';
 
 // Generate short ID (8 chars)
 const generateId = () => {
