@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
   try {
     // Query Notion database for the report ID
-    const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_DATABASE_ID}/query`, {
+    const queryResponse = await fetch(`https://api.notion.com/v1/databases/${NOTION_DATABASE_ID}/query`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -33,30 +33,55 @@ export default async function handler(req, res) {
       })
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Notion query error:', error);
+    if (!queryResponse.ok) {
+      const error = await queryResponse.json();
+      console.error('[Roast View] Query error:', error);
       return res.status(500).json({ error: 'Database query failed' });
     }
 
-    const data = await response.json();
+    const queryData = await queryResponse.json();
     
-    if (!data.results || data.results.length === 0) {
+    if (!queryData.results || queryData.results.length === 0) {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    const page = data.results[0];
-    const roastDataText = page.properties['Roast Data']?.rich_text?.[0]?.text?.content;
+    const pageId = queryData.results[0].id;
+
+    // Fetch page blocks (content)
+    const blocksResponse = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${NOTION_API_KEY}`,
+        'Notion-Version': '2022-06-28'
+      }
+    });
+
+    if (!blocksResponse.ok) {
+      console.error('[Roast View] Blocks fetch error');
+      return res.status(500).json({ error: 'Failed to fetch report data' });
+    }
+
+    const blocksData = await blocksResponse.json();
     
-    if (!roastDataText) {
+    // Combine all code blocks to reconstruct the JSON
+    let roastJson = '';
+    for (const block of blocksData.results) {
+      if (block.type === 'code' && block.code?.rich_text) {
+        for (const text of block.code.rich_text) {
+          roastJson += text.plain_text || '';
+        }
+      }
+    }
+
+    if (!roastJson) {
       return res.status(404).json({ error: 'Roast data not found' });
     }
 
-    const roastData = JSON.parse(roastDataText);
+    const roastData = JSON.parse(roastJson);
     return res.status(200).json(roastData);
     
   } catch (error) {
-    console.error('Fetch roast error:', error);
+    console.error('[Roast View] Error:', error.message);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
