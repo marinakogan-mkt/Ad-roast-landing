@@ -52,12 +52,14 @@
 
     const saveToNotion = async (data) => {
       try {
-        await fetch('/api/lead', {
+        const res = await fetch('/api/lead', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-      } catch (e) { console.error('Notion error:', e); }
+        const json = await res.json();
+        return json.reportId || null;
+      } catch (e) { console.error('Notion error:', e); return null; }
     };
 
     const validateLinkedIn = (url) => {
@@ -96,19 +98,28 @@
       // Check for shared report in URL on load
       React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const encoded = params.get('r');
-        if (encoded) {
-          try {
-            const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-            if (decoded.result && decoded.icp) {
-              setResult(decoded.result);
-              setIcp(decoded.icp);
-              setPlatform(decoded.platform || 'meta');
-              setOfferType(decoded.offerType || 'demo');
-              setIsSharedView(true);
-              setView('results');
-            }
-          } catch (e) { console.error('Failed to decode shared report:', e); }
+        const reportId = params.get('id');
+        if (reportId) {
+          setView('loading-report');
+          fetch(`/api/roast-view?id=${reportId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.result) {
+                setResult(data.result);
+                setIcp(data.icp || '');
+                setPlatform(data.platform || 'meta');
+                setIsSharedView(true);
+                setView('results');
+              } else {
+                setError('Report not found');
+                setView('landing');
+              }
+            })
+            .catch(e => {
+              console.error('Failed to load report:', e);
+              setError('Failed to load report');
+              setView('landing');
+            });
         }
       }, []);
 
@@ -127,20 +138,29 @@
 
       const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-      const generateShareLink = () => {
-        const data = { result, icp, platform, offerType };
-        const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-        return window.location.origin + window.location.pathname + '?r=' + encoded;
-      };
-
       const sendReportLink = async () => {
         if (!validateEmail(reportEmail)) { setReportEmailErr('Please enter a valid email address'); return; }
         setReportEmailErr(null); setPdfStatus('sending');
         
-        const shareLink = generateShareLink();
         const adScore = result.overall_score;
         const lpScore = result.landing_page_roast?.overall_score || 'N/A';
         const matchScore = result.ad_landing_mismatch?.alignment_score || 'N/A';
+        
+        // Save to Notion and get report ID
+        const reportId = await saveToNotion({
+          email: reportEmail,
+          linkedin: linkedin,
+          platform: platform,
+          adScore: adScore,
+          lpScore: lpScore,
+          matchScore: matchScore,
+          roastData: result,
+          icp: icp
+        });
+        
+        const shareLink = reportId 
+          ? `${window.location.origin}${window.location.pathname}?id=${reportId}`
+          : window.location.href;
         
         // Send link to user
         try {
@@ -157,17 +177,6 @@
           });
         } catch (e) { console.error('Email to user error:', e); }
         
-        // Save to Notion database
-        await saveToNotion({
-          email: reportEmail,
-          linkedin: linkedin,
-          platform: platform,
-          adScore: adScore,
-          lpScore: lpScore,
-          matchScore: matchScore,
-          reportLink: shareLink
-        });
-        
         setShareableLink(shareLink);
         setPdfStatus('sent');
       };
@@ -177,12 +186,26 @@
         if (!v.valid) { setLinkedinErr(v.error); return; }
         setLinkedinErr(null); setSending(true);
         
-        const shareLink = generateShareLink();
         const adScore = result.overall_score;
         const lpScore = result.landing_page_roast?.overall_score || 'N/A';
         const matchScore = result.ad_landing_mismatch?.alignment_score || 'N/A';
         
-        // ONE email to Marina with LinkedIn + roast info
+        // Save to Notion first and get report ID
+        const reportId = await saveToNotion({
+          linkedin: linkedin,
+          platform: platform,
+          adScore: adScore,
+          lpScore: lpScore,
+          matchScore: matchScore,
+          roastData: result,
+          icp: icp
+        });
+        
+        const shareLink = reportId 
+          ? `${window.location.origin}${window.location.pathname}?id=${reportId}`
+          : window.location.href;
+        
+        // ONE email to Marina with LinkedIn + roast info + short link
         try {
           await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -196,16 +219,6 @@
             })
           });
         } catch (e) { console.error('LinkedIn notify error:', e); }
-        
-        // Save to Notion (without email - will be added if they provide it later)
-        await saveToNotion({
-          linkedin: linkedin,
-          platform: platform,
-          adScore: adScore,
-          lpScore: lpScore,
-          matchScore: matchScore,
-          reportLink: shareLink
-        });
         
         setSending(false); setView('results');
       };
@@ -348,6 +361,16 @@
       );
 
       /* ─── PROCESSING ─── */
+      if (view === 'loading-report') return (
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative w-16 h-16 mx-auto mb-6"><div className="absolute inset-0 rounded-full border-4 border-gray-200" /><div style={{ borderColor: '#0a66c2', borderTopColor: 'transparent' }} className="absolute inset-0 rounded-full border-4 animate-spin" /></div>
+            <h2 className="text-xl text-gray-900 mb-2">Loading your report...</h2>
+            <p className="text-gray-500 text-sm">Just a moment</p>
+          </div>
+        </div>
+      );
+
       if (view === 'processing') return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center">
           <div className="text-center">
@@ -563,25 +586,25 @@
                     {pdfStatus === 'sent' ? (
                       <div className="text-center py-2">
                         <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3"><Icon name="check" className="w-6 h-6 text-green-600" /></div>
-                        <p className="text-green-700 font-semibold mb-1">Link sent to {reportEmail}!</p>
-                        <p className="text-gray-500 text-sm mb-3">Bookmark or share your personalized report:</p>
+                        <p className="text-green-700 font-semibold mb-1">Here's your link!</p>
+                        <p className="text-gray-500 text-sm mb-3">Also sent to {reportEmail}</p>
                         <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2 mb-3">
                           <input type="text" readOnly value={shareableLink} className="flex-1 bg-transparent text-xs text-gray-600 outline-none truncate" />
                           <button onClick={() => copy(shareableLink, 'shareLink')} className="p-2 hover:bg-gray-200 rounded transition-colors">
                             {copied.shareLink ? <Icon name="check" className="w-4 h-4 text-green-600" /> : <Icon name="copy" className="w-4 h-4 text-gray-500" />}
                           </button>
                         </div>
-                        <button onClick={() => { setPdfStatus(null); setShareableLink(''); }} className="text-sm hover:underline" style={{ color: '#0a66c2' }}>Send to another email</button>
+                        <button onClick={() => { setPdfStatus(null); setShareableLink(''); }} className="text-sm hover:underline" style={{ color: '#0a66c2' }}>Get a new link</button>
                       </div>
                     ) : (
                       <>
-                        <p className="text-gray-600 text-sm mb-4">Get a permanent link to your report — access it anytime, anywhere.</p>
+                        <p className="text-gray-600 text-sm mb-4">Enter your email to get a permanent link to your report.</p>
                         <div className="mb-4">
                           <input type="email" placeholder="your@email.com" value={reportEmail} onChange={(e) => { setReportEmail(e.target.value); setReportEmailErr(null); }} className={`w-full px-3 py-2.5 bg-white border rounded-lg text-sm focus:outline-none focus:ring-1 ${reportEmailErr ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`} />
                           {reportEmailErr && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><Icon name="alertCircle" className="w-3 h-3" />{reportEmailErr}</p>}
                         </div>
                         <button onClick={sendReportLink} disabled={pdfStatus === 'sending'} style={reportEmail ? { backgroundColor: '#0a66c2', color: 'white' } : {}} className={`w-full py-2.5 rounded-full font-semibold text-sm flex items-center justify-center gap-2 transition-all ${reportEmail ? 'hover:opacity-90' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-                          {pdfStatus === 'sending' ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Icon name="mail" className="w-4 h-4" />} Email Me the Link
+                          {pdfStatus === 'sending' ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Icon name="link" className="w-4 h-4" />} Get My Link
                         </button>
                         <p className="text-gray-400 text-xs mt-3 text-center">Your email stays between us. No spam, ever.</p>
                       </>
