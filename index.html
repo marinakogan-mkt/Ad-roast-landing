@@ -49,7 +49,7 @@
     };
 
     const EMAIL_CONFIG = { service_id: 'service_ywioabe', template_id: 'template_gtqow85', public_key: '964Wa83HevoEa5KnS', notify_email: 'marina.kogan@brandswithpurpose.us' };
-    const LINKEDIN_CTA_URL = 'https://www.linkedin.com/messaging/compose/?recipient=koganmarinamkt';
+    const PAYMENT_URL = 'https://buy.stripe.com/dRmeVc1XK9Hg1Ay6iRew800';
 
     const notifyCtaClick = async (leadLinkedIn, section) => {
       try {
@@ -62,8 +62,8 @@
             user_id: EMAIL_CONFIG.public_key,
             template_params: {
               to_email: EMAIL_CONFIG.notify_email,
-              subject: '🔓 AdRoast: Someone wants the Full Report!',
-              message: `A lead clicked "Get Full Report" on the ${section} section.\n\nTheir LinkedIn: ${leadLinkedIn || 'Unknown'}\n\nThey were redirected to your LinkedIn DMs - follow up if they don't message!`
+              subject: '💰 AdRoast: Someone clicked to buy Full Report!',
+              message: `A lead clicked "Get Full Report" on the ${section} section.\n\nTheir LinkedIn: ${leadLinkedIn || 'Unknown'}\n\nThey were redirected to Stripe checkout - check if payment comes through!`
             }
           })
         });
@@ -72,7 +72,7 @@
 
     const handleCtaClick = (leadLinkedIn, section) => {
       notifyCtaClick(leadLinkedIn, section);
-      window.open(LINKEDIN_CTA_URL, '_blank');
+      window.open(PAYMENT_URL, '_blank');
     };
 
     const saveToNotion = async (data) => {
