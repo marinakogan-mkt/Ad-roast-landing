@@ -67,7 +67,7 @@
       return icons[name] || null;
     };
 
-    const EMAIL_CONFIG = { service_id: 'service_ywioabe', template_id: 'template_gtqow85', public_key: '964Wa83HevoEa5KnS', notify_email: 'marina.kogan@koganmarina.com' };
+    const EMAIL_CONFIG = { service_id: 'service_ywioabe', template_id: 'template_gtqow85', public_key: '964Wa83HevoEa5KnS', notify_email: 'marina.kogan@brandswithpurpose.us' };
     const PAYMENT_URL = 'https://buy.stripe.com/28EdR8cCo2eO6USdLjew803';
 
     const notifyCtaClick = async (leadLinkedIn, section) => {
@@ -82,7 +82,7 @@
             template_params: {
               to_email: EMAIL_CONFIG.notify_email,
               subject: '💰 AdRoast: Someone clicked to buy Full Report!',
-              message: `A lead clicked "Get Full Report" on the ${section} section.\n\nTheir LinkedIn: ${leadLinkedIn || 'Unknown'}\n\nThey were redirected to Stripe checkout - check if payment comes through!`
+              message: `A lead clicked "Get the Full Diagnosis" on the ${section} section.\n\nTheir LinkedIn: ${leadLinkedIn || 'Unknown'}\n\nThey were redirected to Stripe checkout - check if payment comes through!`
             }
           })
         });
@@ -196,7 +196,7 @@
         
         // Save to Notion and get report ID
         const reportId = await saveToNotion({
-          email: adminMode ? 'internal@koganmarina.com' : reportEmail,
+          email: adminMode ? 'internal@brandswithpurpose.us' : reportEmail,
           linkedin: linkedin || 'internal-audit',
           platform: platform,
           adScore: adScore,
@@ -789,7 +789,7 @@
                                     summary: "Audit of playful cat metaphor ad and shadow SaaS inventory landing page messaging alignment.",
                                     findings: "The playful cat energy works in the ad (7/10) but dies on a corporate landing page. Tone inconsistency kills conversion potential.",
                                     recommendations: "Carry the metaphor forward to the landing page. Use relatable language IT teams actually use internally.",
-                                    auditUrl: "https://www.koganmarina.com/?id=A45fRcsN",
+                                    auditUrl: "https://www.brandswithpurpose.us/?id=A45fRcsN",
                                     adUrl: "https://www.linkedin.com/ad-library/detail/1021588116",
                                     landingPageUrl: "https://www.nudgesecurity.com/try-nudge/free-shadow-saas-inventory?utm_medium=paid_social&utm_source=linkedin&utm_content=tof&utm_campaign=saas_sprawl&utm_term=meme_saas_sprawl_cat-laser-beam_og&trk=ad_library_ad_preview_headline_content"
                                 },
@@ -798,7 +798,7 @@
                                     summary: "Analysis of discovery-focused messaging and feature education landing page conversion potential.",
                                     findings: "Ad emphasizes 'Day One visibility' but landing page buries this key differentiator below the fold.",
                                     recommendations: "Make 'Day One visibility' the hero headline. Add specific results numbers like 'discover 3x more apps than expected.'",
-                                    auditUrl: "https://www.koganmarina.com/?id=zqTSNdfF",
+                                    auditUrl: "https://www.brandswithpurpose.us/?id=zqTSNdfF",
                                     adUrl: "https://www.linkedin.com/ad-library/detail/856848906",
                                     landingPageUrl: "https://www.nudgesecurity.com/features/saas-discovery?utm_medium=paid_social&utm_source=linkedin&utm_content=mof&utm_campaign=saas_discovery&utm_term=image_find-every-saas-button&hsa_acc=509483795&hsa_cam=766701946&hsa_grp=414445406&hsa_ad=856848906&hsa_net=linkedin&hsa_ver=3&trk=ad_library_ad_preview_headline_content"
                                 },
@@ -807,7 +807,7 @@
                                     summary: "Evaluation of cost savings messaging versus security-first positioning for IT decision makers.",
                                     findings: "Major disconnect. ICP's primary pain is visibility, not cost. Both ad and LP are optimized for CFOs, not CISOs.",
                                     recommendations: "Deprioritize spend messaging. Focus on security outcomes and compliance readiness instead.",
-                                    auditUrl: "https://www.koganmarina.com/?id=gzvxQUzr",
+                                    auditUrl: "https://www.brandswithpurpose.us/?id=gzvxQUzr",
                                     adUrl: "https://www.linkedin.com/ad-library/detail/744052366",
                                     landingPageUrl: "https://www.nudgesecurity.com/use-cases/saas-spend-management?utm_medium=paid_social&utm_source=linkedin&utm_content=mof&utm_campaign=saas_spend&utm_term=image_saas-spend-mgmt&hsa_acc=509483795&hsa_cam=766701946&hsa_grp=414445406&hsa_ad=744052366&hsa_net=linkedin&hsa_ver=3&trk=ad_library_ad_preview_headline_content"
                                 },
@@ -816,7 +816,7 @@
                                     summary: "Assessment of free inventory offer messaging and lead generation landing page effectiveness.",
                                     findings: "Strong offer but generic execution. Zero trust signals in a 15-word ad targeting security professionals.",
                                     recommendations: "Add credibility markers and security team logos. Make the inventory feel like proof of a problem, not just an asset.",
-                                    auditUrl: "https://www.koganmarina.com/?id=jeGGBXMg",
+                                    auditUrl: "https://www.brandswithpurpose.us/?id=jeGGBXMg",
                                     adUrl: "https://www.linkedin.com/ad-library/detail/743863956",
                                     landingPageUrl: "https://www.nudgesecurity.com/free-shadow-saas-inventory?utm_medium=paid_social&utm_source=linkedin&utm_content=tof&utm_campaign=saas_discovery&utm_term=meme_shadowsaas_wrestling&trk=ad_library_ad_preview_headline_content"
                                 },
@@ -825,7 +825,7 @@
                                     summary: "Analysis of fear-based messaging and security professional onboarding flow conversion.",
                                     findings: "Best ad (7/10) with brilliant problem agitation, but worst handoff (4/10). Compelling narrative evaporates on arrival.",
                                     recommendations: "Create a CISO-specific landing page that continues the nightmare scenario. Do not abandon the urgency.",
-                                    auditUrl: "https://www.koganmarina.com/?id=FSuv7GVr",
+                                    auditUrl: "https://www.brandswithpurpose.us/?id=FSuv7GVr",
                                     adUrl: "https://www.linkedin.com/posts/russell-spitler_if-i-were-a-ciso-trying-to-secure-a-modern-activity-7422674209866158080-YpyX/?utm_source=share&utm_medium=member_desktop&rcm=ACoAAALZYHsBKlGcVjgVV6ogTBO7ymVFdwET_r4",
                                     landingPageUrl: "https://www.nudgesecurity.com/getting-started"
                                 }
