@@ -1110,7 +1110,7 @@
                                 <div className="mx-auto mb-3 flex items-center justify-center gap-2">
                                     <Icon name="linkedin" className="w-10 h-10" />
                                 </div>
-                                <h1 className="text-lg font-bold serif" style={{ color: 'var(--ink)' }}>AdRoast</h1>
+                                <h1 className="text-lg font-bold" style={{ color: 'var(--ink)' }}>AdRoast</h1>
                                 <p className="text-sm mt-1" style={{ color: 'var(--slate)' }}>Enter your access code to continue</p>
                             </div>
                             <div className="relative">
@@ -2220,7 +2220,7 @@
 
     function setFaviconAndTitle(isPortal) {
       const link = document.getElementById('dynamic-favicon');
-      if (link) link.href = isPortal ? FAVICON_BWP : FAVICON_LINKEDIN;
+      if (link) link.href = FAVICON_LINKEDIN;
       document.title = isPortal ? 'AdRoast | Partner Portal' : 'AdRoast';
     }
 
