@@ -330,14 +330,14 @@
           </header>
 
           {/* HERO */}
-          <section className="flex-shrink-0 text-center px-4" style={{ paddingTop: '100px', paddingBottom: '40px' }}>
+          <section className="flex-shrink-0 text-center px-4" style={{ paddingTop: '60px', paddingBottom: '40px' }}>
             <div className="max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 border border-gray-200 rounded-full mb-7">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-full mb-5">
                 <Icon name="alertCircle" className="w-4 h-4" style={{ color: '#0a66c2' }} />
-                <span style={{ color: '#0a66c2' }} className="text-sm">Running $10K+/month on Ads but demo quality still sucks?</span>
+                <span style={{ color: '#0a66c2' }} className="text-xs sm:text-sm">Running $10K+/mo on Ads but demo quality still sucks?</span>
               </div>
-              <h1 className="text-gray-900 mb-5" style={{ fontSize: 'clamp(40px, 5.5vw, 64px)', fontWeight: 300, lineHeight: 1.1, letterSpacing: '-0.5px' }}>Find out exactly why your<br />Ads aren't converting.</h1>
-              <p className="text-gray-400 max-w-md mx-auto mb-8" style={{ fontSize: '17px', lineHeight: 1.7 }}>Drop your ICP, your Ad, and your page.<br />We'll show you where demos leak.</p>
+              <h1 className="text-gray-900 mb-5" style={{ fontSize: 'clamp(36px, 5.5vw, 64px)', fontWeight: 300, lineHeight: 1.1, letterSpacing: '-0.5px' }}>Find out exactly why your Ads aren't converting.</h1>
+              <p className="text-gray-400 max-w-md mx-auto mb-8" style={{ fontSize: 'clamp(15px, 3vw, 17px)', lineHeight: 1.7 }}>Drop your ICP, your Ad, and your page. We'll show you where demos leak.</p>
               <div className="flex items-center justify-center">
                 <button onClick={() => setView('onboarding')} style={{ backgroundColor: '#0a66c2', color: '#fff', borderColor: '#0a66c2' }} className="px-8 py-3 border rounded-full font-medium text-base hover:opacity-90 transition-opacity">Roast my Ad</button>
               </div>
@@ -346,14 +346,14 @@
           </section>
 
           {/* WHAT YOU GET */}
-          <div className="grid grid-cols-4 gap-0 max-w-3xl mx-auto px-4 mb-20">
+          <div className="grid grid-cols-2 sm:grid-cols-4 max-w-3xl mx-auto px-4 mb-20">
             {[
               { icon: 'users', title: "ICP Match", desc: "How well your Ad speaks to your buyer" },
               { icon: 'alertCircle', title: "5 Killers", desc: "The exact issues stealing your demos" },
               { icon: 'zap', title: "Message Drift", desc: "Where Ad and page stop matching" },
               { icon: 'sparkles', title: "Action List", desc: "Top fixes ranked by impact" }
             ].map((f, i) => (
-              <div key={i} className="p-4 bg-blue-50 border border-blue-200 transition-all" style={{ marginLeft: i > 0 ? '-1px' : 0, borderRadius: i === 0 ? '10px 0 0 10px' : i === 3 ? '0 10px 10px 0' : 0 }}>
+              <div key={i} className="p-4 bg-blue-50 border border-blue-200 transition-all">
                 <Icon name={f.icon} className="w-6 h-6 mb-2" style={{ color: '#0a66c2' }} />
                 <h3 className="font-semibold text-sm" style={{ color: '#0a66c2' }}>{f.title}</h3>
                 <p className="text-xs mt-1 text-blue-700 opacity-75">{f.desc}</p>
@@ -364,7 +364,7 @@
           {/* RESULTS */}
           <section className="max-w-3xl mx-auto px-4 pb-20 w-full">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide mb-5" style={{ backgroundColor: '#eef2ff', color: '#0a66c2' }}>Client Results</div>
-            <h2 className="text-gray-900 mb-4" style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', fontWeight: 300, letterSpacing: '-0.3px', lineHeight: 1.2 }}>What happens when you fix positioning<br />instead of increasing budget.</h2>
+            <h2 className="text-gray-900 mb-4" style={{ fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 300, letterSpacing: '-0.3px', lineHeight: 1.2 }}>What happens when you fix positioning instead of increasing budget.</h2>
             <p className="text-gray-400 mb-10 max-w-lg" style={{ fontSize: '15px', lineHeight: 1.7 }}>A bigger budget won't save broken positioning. These are real numbers from founders who fixed the real problem first.</p>
             <div className="grid grid-cols-2 gap-4">
               {[
@@ -384,7 +384,7 @@
           {/* PRICING TIERS */}
           <section className="max-w-5xl mx-auto px-4 pb-20 w-full">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide mb-5" style={{ backgroundColor: '#eef2ff', color: '#0a66c2' }}>How It Works</div>
-            <h2 className="text-gray-900 mb-4" style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', fontWeight: 300, letterSpacing: '-0.3px', lineHeight: 1.2 }}>Diagnose what's broken,<br />get the fix, or have us build it.</h2>
+            <h2 className="text-gray-900 mb-4" style={{ fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 300, letterSpacing: '-0.3px', lineHeight: 1.2 }}>Diagnose what's broken, get the fix, or have us build it.</h2>
             <p className="text-gray-400 mb-12 max-w-lg" style={{ fontSize: '15px', lineHeight: 1.7 }}>Three ways to work together, depending on how deep your positioning problem runs.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -469,7 +469,7 @@
 
           {/* BOTTOM CTA */}
           <section className="text-center px-4 pb-20 max-w-xl mx-auto">
-            <h2 className="text-gray-900 mb-3" style={{ fontSize: 'clamp(30px, 4vw, 44px)', fontWeight: 300, letterSpacing: '-0.3px', lineHeight: 1.05 }}>Find out exactly why your<br />Ads aren't converting.</h2>
+            <h2 className="text-gray-900 mb-3" style={{ fontSize: 'clamp(24px, 4vw, 44px)', fontWeight: 300, letterSpacing: '-0.3px', lineHeight: 1.1 }}>Find out exactly why your Ads aren't converting.</h2>
             <p className="text-gray-400 mb-8 text-xs">Get a brutally honest read on your Ad and landing page in 2 minutes.</p>
             <div className="flex items-center justify-center">
               <button onClick={() => setView('onboarding')} style={{ backgroundColor: '#0a66c2', color: '#fff', borderColor: '#0a66c2' }} className="px-8 py-3 border rounded-full font-medium text-sm hover:opacity-90 transition-opacity">Roast my Ad <span className="font-normal opacity-75">(free 2-min audit)</span></button>
@@ -480,7 +480,6 @@
           <footer className="border-t border-gray-200 py-8 px-4 text-center">
             <div className="flex justify-center gap-6 mb-4 flex-wrap">
               <a href="mailto:marina.kogan@brandswithpurpose.us" className="text-gray-400 text-xs hover:text-blue-600 transition-colors no-underline">marina.kogan@brandswithpurpose.us</a>
-              <a href="https://koganmarina.com" target="_blank" rel="noopener" className="text-gray-400 text-xs hover:text-blue-600 transition-colors no-underline">koganmarina.com</a>
               <a href="https://linkedin.com/in/koganmarinamkt" target="_blank" rel="noopener" className="text-gray-400 text-xs hover:text-blue-600 transition-colors no-underline">LinkedIn</a>
             </div>
             <p className="text-gray-300 text-xs">USA / EU / Global &middot; Brands With Purpose &middot; Creativeer OÜ</p>
