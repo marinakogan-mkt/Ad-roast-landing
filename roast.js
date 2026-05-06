@@ -1,1 +1,338 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb'
+    }
+  }
+};
 
+export default async function handler(req, res) {
+  const API_VERSION = 'v4';
+  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed', _version: API_VERSION });
+  }
+
+  // Safeguard: manually parse body if Vercel didn't auto-parse it
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch(e) { body = {}; }
+  }
+  if (!body || typeof body !== 'object') {
+    body = {};
+  }
+
+  const { platform, offerType, icpDescription, landingUrl, adCopy, visualDescription, hasImage, landingCopy, adScreenshot } = body;
+
+  console.log('[AdRoast v4] Request body type:', typeof req.body);
+  console.log('[AdRoast v4] Request body keys:', Object.keys(body));
+  console.log('[AdRoast v4] Received:', {
+    platform,
+    offerType,
+    adCopyLen: adCopy?.length || 0,
+    landingUrl: landingUrl || 'none',
+    landingCopyLen: landingCopy?.length || 0
+  });
+
+  // Track what content we actually have
+  const meta = {
+    _version: API_VERSION,
+    bodyType: typeof req.body,
+    bodyKeys: Object.keys(body),
+    hasAdCopy: !!adCopy?.trim(),
+    adCopyLength: adCopy?.trim()?.length || 0,
+    hasLandingUrl: !!landingUrl?.trim(),
+    hasLandingCopy: !!landingCopy?.trim(),
+    landingCopyLength: landingCopy?.trim()?.length || 0,
+    landingScraped: false,
+    landingScrapeError: null
+  };
+
+  // Fetch landing page content if URL provided
+  let landingPageContent = '';
+  if (landingUrl?.trim()) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const pageRes = await fetch(landingUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9'
+        },
+        signal: controller.signal,
+        redirect: 'follow'
+      });
+      clearTimeout(timeout);
+      const html = await pageRes.text();
+      
+      // Extract structured elements
+      const extractedElements = [];
+      
+      // Title
+      const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+      if (titleMatch) extractedElements.push(`PAGE TITLE: ${titleMatch[1].trim()}`);
+      
+      // Meta description
+      const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+      if (metaDesc) extractedElements.push(`META DESCRIPTION: ${metaDesc[1].trim()}`);
+      
+      // OG tags
+      const ogTitle = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
+      const ogDesc = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i);
+      if (ogTitle) extractedElements.push(`OG TITLE: ${ogTitle[1].trim()}`);
+      if (ogDesc) extractedElements.push(`OG DESCRIPTION: ${ogDesc[1].trim()}`);
+      
+      // H1s
+      const h1s = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/gi);
+      if (h1s) extractedElements.push(`H1 HEADLINES: ${h1s.map(h => h.replace(/<[^>]+>/g, '').trim()).filter(Boolean).join(' | ')}`);
+      
+      // H2s
+      const h2s = html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/gi);
+      if (h2s) extractedElements.push(`H2 SUBHEADLINES: ${h2s.slice(0, 10).map(h => h.replace(/<[^>]+>/g, '').trim()).filter(Boolean).join(' | ')}`);
+      
+      // H3s
+      const h3s = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi);
+      if (h3s) extractedElements.push(`H3 SECTIONS: ${h3s.slice(0, 10).map(h => h.replace(/<[^>]+>/g, '').trim()).filter(Boolean).join(' | ')}`);
+      
+      // Buttons and CTAs
+      const buttons = html.match(/<button[^>]*>([\s\S]*?)<\/button>/gi);
+      const ctaLinks = html.match(/<a[^>]*class=["'][^"']*(?:cta|btn|button)[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi);
+      const allCtas = [...(buttons || []), ...(ctaLinks || [])];
+      if (allCtas.length > 0) {
+        const ctaTexts = allCtas.map(c => c.replace(/<[^>]+>/g, '').trim()).filter(t => t.length > 0 && t.length < 100);
+        if (ctaTexts.length > 0) extractedElements.push(`CTA/BUTTON TEXT: ${[...new Set(ctaTexts)].slice(0, 10).join(' | ')}`);
+      }
+      
+      // List items (benefits, features)
+      const lis = html.match(/<li[^>]*>([\s\S]*?)<\/li>/gi);
+      if (lis && lis.length > 0) {
+        const liTexts = lis.map(l => l.replace(/<[^>]+>/g, '').trim()).filter(t => t.length > 5 && t.length < 200);
+        if (liTexts.length > 0) extractedElements.push(`LIST ITEMS/BENEFITS: ${liTexts.slice(0, 15).join(' | ')}`);
+      }
+      
+      // Testimonials / blockquotes
+      const quotes = html.match(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi);
+      if (quotes) {
+        const quoteTexts = quotes.map(q => q.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+        if (quoteTexts.length > 0) extractedElements.push(`TESTIMONIALS/QUOTES: ${quoteTexts.slice(0, 5).join(' | ')}`);
+      }
+      
+      // Full text content (scripts/styles removed)
+      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      const contentHtml = bodyMatch ? bodyMatch[1] : html;
+      const fullText = contentHtml
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+        .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&[a-z]+;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 10000);
+      
+      if (extractedElements.length > 0) {
+        landingPageContent = `STRUCTURED EXTRACTION:\n${extractedElements.join('\n')}\n\nFULL PAGE TEXT:\n${fullText}`;
+      } else {
+        landingPageContent = fullText;
+      }
+      
+      if (landingPageContent.trim().length > 50) {
+        meta.landingScraped = true;
+      } else {
+        landingPageContent = '';
+        meta.landingScrapeError = 'Page returned empty or minimal content';
+      }
+    } catch (e) {
+      meta.landingScrapeError = e.message;
+      landingPageContent = '';
+    }
+  }
+
+  const hasAnyLandingContent = !!(landingPageContent || landingCopy?.trim());
+
+  const systemPrompt = `You are AdRoast, a brutally honest ad and landing page analyst for SaaS founders.
+
+Your job:
+1. Analyze whether the AD speaks to the user's stated ICP
+2. If landing page content is provided: Analyze the LANDING PAGE for conversion issues
+3. If both ad AND landing page exist: Identify MESSAGING MISMATCH between them
+
+Approach: Direct, sarcastic but not mean. Use the "barbecue test" - would this copy make sense at a casual BBQ? Cite specific copy from both ad AND landing page when critiquing. Be harsh but fair — most ads and pages deserve 4-6.
+
+Scoring (1-10): 1-3 = Actively hurting conversions, 4-6 = Generic/forgettable, 7-8 = Solid, 9-10 = Best-in-class
+
+CRITICAL RULES:
+- Return ONLY valid JSON. No markdown. No backticks. No text before or after the JSON.
+- ALWAYS include ALL sections: issues, landing_page_roast, ad_landing_mismatch, fix_kit, experiments, next_steps.
+- If landing page content IS provided, landing_page_roast and ad_landing_mismatch scores MUST be real numbers 1-10. NEVER 0 or null.
+- If NO landing page content is provided, set landing_page_roast and ad_landing_mismatch scores to 0.`;
+
+  const userPrompt = `Analyze this ad${hasAnyLandingContent ? ' AND its landing page' : ''} for ICP: "${icpDescription}"
+
+Platform: ${platform}
+Offer: ${offerType}
+Landing Page URL: ${landingUrl || 'Not provided'}
+Landing page content available: ${hasAnyLandingContent ? 'YES — SCORE IT 1-10' : 'NO — SCORE IT 0'}
+
+${adCopy ? `=== AD COPY ===\n${adCopy}` : '=== AD COPY ===\n[No ad copy provided]'}
+
+${visualDescription ? `=== AD VISUAL DESCRIPTION ===\n${visualDescription}` : ''}
+
+${landingPageContent ? `=== LANDING PAGE CONTENT (AUTO-SCRAPED FROM URL) ===\n${landingPageContent}` : ''}
+
+${landingCopy?.trim() ? `=== LANDING PAGE CONTENT (USER-PROVIDED) ===\n${landingCopy}` : ''}
+
+${!hasAnyLandingContent ? 'NO LANDING PAGE CONTENT AVAILABLE. Set all landing_page_roast scores to 0 and ad_landing_mismatch alignment_score to 0.' : 'LANDING PAGE CONTENT IS AVAILABLE ABOVE. You MUST provide real scores (1-10) for landing_page_roast and ad_landing_mismatch. Do NOT use 0.'}
+
+Return this EXACT JSON structure (all fields required):
+{
+  "icp_mismatch": "string",
+  "overall_score": <number 1-10>,
+  "issues": [
+    {"category": "headline_clarity", "title": "Headline Clarity", "score": <1-10>, "explanation": "string"},
+    {"category": "cta_friction", "title": "CTA Friction", "score": <1-10>, "explanation": "string"},
+    {"category": "visual_copy_match", "title": "Visual-Copy Match", "score": <1-10>, "explanation": "string"},
+    {"category": "benefit_specificity", "title": "Benefit Specificity", "score": <1-10>, "explanation": "string"},
+    {"category": "trust_signals", "title": "Trust Signals", "score": <1-10>, "explanation": "string"}
+  ],
+  "landing_page_roast": {
+    "overall_score": <${hasAnyLandingContent ? '1-10 REQUIRED — NOT 0' : '0'}>,
+    "headline_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "headline_feedback": "string",
+    "value_prop_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "value_prop_feedback": "string",
+    "cta_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "cta_feedback": "string",
+    "trust_score": <${hasAnyLandingContent ? '1-10' : '0'}>,
+    "trust_feedback": "string",
+    "top_issues": ["string", "string", "string"],
+    "quick_wins": ["string", "string", "string"]
+  },
+  "ad_landing_mismatch": {
+    "alignment_score": <${hasAnyLandingContent ? '1-10 REQUIRED — NOT 0' : '0'}>,
+    "verdict": "string",
+    "disconnects": [{"problem": "string", "fix": "string"}],
+    "message_match_issues": "string"
+  },
+  "fix_kit": {
+    "headlines": ["string", "string", "string"],
+    "body": "string",
+    "ctas": ["string", "string"],
+    "landing_page_headline": "string",
+    "landing_page_subhead": "string",
+    "rationale": "string"
+  },
+  "experiments": [
+    {"title": "string", "description": "string"},
+    {"title": "string", "description": "string"},
+    {"title": "string", "description": "string"}
+  ],
+  "next_steps": ["string", "string", "string", "string"]
+}`;
+
+  // Build message content - text only or text + image
+  const messageContent = [];
+  
+  if (adScreenshot) {
+    // Detect media type from base64 header or default to jpeg
+    let mediaType = 'image/jpeg';
+    if (adScreenshot.startsWith('/9j/')) mediaType = 'image/jpeg';
+    else if (adScreenshot.startsWith('iVBOR')) mediaType = 'image/png';
+    else if (adScreenshot.startsWith('UklGR')) mediaType = 'image/webp';
+    
+    messageContent.push({
+      type: 'image',
+      source: { type: 'base64', media_type: mediaType, data: adScreenshot }
+    });
+    messageContent.push({
+      type: 'text',
+      text: `The image above is the actual ad creative. Extract ALL text visible in the image (headlines, body copy, CTA buttons, fine print) and use it as part of your analysis.\n\n${userPrompt}`
+    });
+    meta.hasScreenshot = true;
+  } else {
+    messageContent.push({ type: 'text', text: userPrompt });
+  }
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: messageContent }]
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message || 'API error', _meta: meta });
+    }
+
+    if (data.content?.[0]?.text) {
+      const jsonMatch = data.content[0].text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        console.log('[AdRoast] Meta:', JSON.stringify(meta));
+        console.log('[AdRoast] hasAnyLandingContent:', hasAnyLandingContent);
+        
+        // Ensure landing_page_roast always exists
+        if (!parsed.landing_page_roast) {
+          parsed.landing_page_roast = {
+            overall_score: hasAnyLandingContent ? 5 : 0,
+            headline_score: hasAnyLandingContent ? 5 : 0,
+            headline_feedback: hasAnyLandingContent ? 'Analysis could not be completed' : 'No landing page provided',
+            value_prop_score: hasAnyLandingContent ? 5 : 0, value_prop_feedback: '',
+            cta_score: hasAnyLandingContent ? 5 : 0, cta_feedback: '',
+            trust_score: hasAnyLandingContent ? 5 : 0, trust_feedback: '',
+            top_issues: [], quick_wins: []
+          };
+        }
+        
+        // Ensure ad_landing_mismatch always exists
+        if (!parsed.ad_landing_mismatch) {
+          parsed.ad_landing_mismatch = {
+            alignment_score: hasAnyLandingContent ? 5 : 0,
+            verdict: hasAnyLandingContent ? 'Analysis could not be completed' : 'No landing page provided for comparison',
+            disconnects: [], message_match_issues: ''
+          };
+        }
+        
+        // FIX: If we HAVE landing content but LLM returned 0 scores, force minimum of 1
+        // This is the main bug — LLM sometimes returns 0 even when content exists
+        if (hasAnyLandingContent) {
+          const lp = parsed.landing_page_roast;
+          if (!lp.overall_score || lp.overall_score < 1) lp.overall_score = Math.max(1, lp.headline_score || 5);
+          if (!lp.headline_score || lp.headline_score < 1) lp.headline_score = 5;
+          if (!lp.value_prop_score || lp.value_prop_score < 1) lp.value_prop_score = 5;
+          if (!lp.cta_score || lp.cta_score < 1) lp.cta_score = 5;
+          if (!lp.trust_score || lp.trust_score < 1) lp.trust_score = 5;
+          
+          const mm = parsed.ad_landing_mismatch;
+          if (!mm.alignment_score || mm.alignment_score < 1) mm.alignment_score = 5;
+        }
+        
+        console.log('[AdRoast] LP score:', parsed.landing_page_roast.overall_score);
+        console.log('[AdRoast] Match score:', parsed.ad_landing_mismatch.alignment_score);
+        
+        // Add meta for frontend debugging
+        parsed._meta = meta;
+        parsed._version = API_VERSION;
+        return res.status(200).json(parsed);
+      }
+    }
+
+    return res.status(500).json({ error: 'Could not parse response', _meta: meta });
+  } catch (error) {
+    return res.status(500).json({ error: 'Server error: ' + error.message, _meta: meta });
+  }
+}
