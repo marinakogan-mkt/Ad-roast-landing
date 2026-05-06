@@ -1,3 +1,11 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb'
+    }
+  }
+};
+
 export default async function handler(req, res) {
   const API_VERSION = 'v4';
   
@@ -14,7 +22,7 @@ export default async function handler(req, res) {
     body = {};
   }
 
-  const { platform, offerType, icpDescription, landingUrl, adCopy, visualDescription, hasImage, landingCopy } = body;
+  const { platform, offerType, icpDescription, landingUrl, adCopy, visualDescription, hasImage, landingCopy, adScreenshot } = body;
 
   console.log('[AdRoast v4] Request body type:', typeof req.body);
   console.log('[AdRoast v4] Request body keys:', Object.keys(body));
@@ -224,6 +232,29 @@ Return this EXACT JSON structure (all fields required):
   "next_steps": ["string", "string", "string", "string"]
 }`;
 
+  // Build message content - text only or text + image
+  const messageContent = [];
+  
+  if (adScreenshot) {
+    // Detect media type from base64 header or default to jpeg
+    let mediaType = 'image/jpeg';
+    if (adScreenshot.startsWith('/9j/')) mediaType = 'image/jpeg';
+    else if (adScreenshot.startsWith('iVBOR')) mediaType = 'image/png';
+    else if (adScreenshot.startsWith('UklGR')) mediaType = 'image/webp';
+    
+    messageContent.push({
+      type: 'image',
+      source: { type: 'base64', media_type: mediaType, data: adScreenshot }
+    });
+    messageContent.push({
+      type: 'text',
+      text: `The image above is the actual ad creative. Extract ALL text visible in the image (headlines, body copy, CTA buttons, fine print) and use it as part of your analysis.\n\n${userPrompt}`
+    });
+    meta.hasScreenshot = true;
+  } else {
+    messageContent.push({ type: 'text', text: userPrompt });
+  }
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -236,7 +267,7 @@ Return this EXACT JSON structure (all fields required):
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
+        messages: [{ role: 'user', content: messageContent }]
       })
     });
 
